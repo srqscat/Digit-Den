@@ -1,0 +1,1816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Digit Den</title>
+<meta name="description" content="Digit Den: small math and logic puzzles. Crack a hidden 4-digit code, or make 24 from four numbers.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+[hidden] { display: none !important; }
+.skip { position: absolute; left: 8px; top: -60px; z-index: 100; background: var(--card); color: var(--ink); padding: 8px 14px; border-radius: 8px; border: 2px solid var(--accent); font-weight: 700; text-decoration: none; }
+.skip:focus { top: 8px; }
+#main:focus { outline: none; }
+
+/* Layout: a graph-paper notebook page; hub of game cards, each game opens as its own view (hash routed). */
+:root {
+  --paper: #f3f5f8;
+  --grid: #dde3ec;
+  --ink: #1b2330;
+  --ink-soft: #5a6577;
+  --rule: #c3ccd9;
+  --card: #ffffff;
+  --accent: #2f5bd3;
+  --hit: #3a9a5b;      /* green: right digit, right place */
+  --near: #d9a520;     /* yellow: digit is in the code elsewhere */
+  --on-hit: #ffffff;
+  --on-near: #2a1f00;
+  --miss-ink: #9aa4b4;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-digit: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161d; --grid: #1c222c; --ink: #e6ebf2; --ink-soft: #97a2b4; --rule: #2e3746;
+    --card: #181d26; --accent: #7b9cf5; --hit: #3f9e60; --near: #d6a52a; --on-hit: #ffffff; --on-near: #221800; --miss-ink: #5c6677;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161d; --grid: #1c222c; --ink: #e6ebf2; --ink-soft: #97a2b4; --rule: #2e3746;
+  --card: #181d26; --accent: #7b9cf5; --hit: #3f9e60; --near: #d6a52a; --on-hit: #ffffff; --on-near: #221800; --miss-ink: #5c6677;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- header ---------- */
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand h1 {
+  margin: 0; font-weight: 800; font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1; letter-spacing: -0.03em;
+}
+.brand h1 .d { font-family: var(--font-digit); font-weight: 700; color: var(--accent); }
+.brand p { margin: 0; color: var(--ink-soft); }
+.back {
+  background: none; border: 1.5px solid var(--rule); border-radius: 999px; padding: 6px 14px; cursor: pointer;
+  font-size: 0.9rem; font-weight: 600; background: var(--card);
+}
+.back:hover { border-color: var(--ink-soft); }
+.top-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lang { position: relative; display: inline-flex; }
+.lang select {
+  appearance: none; -webkit-appearance: none; border: 1.5px solid var(--rule); border-radius: 999px;
+  padding: 6px 32px 6px 14px; font: inherit; font-size: 0.9rem; font-weight: 600; background: var(--card); color: var(--ink); cursor: pointer;
+}
+.lang select:hover { border-color: var(--ink-soft); }
+.lang::after {
+  content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px; pointer-events: none;
+  border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: translateY(-70%) rotate(45deg);
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- hub ---------- */
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.game-card {
+  text-align: left; cursor: pointer; background: var(--card); border: 1.5px solid var(--rule); border-radius: 14px;
+  padding: 18px; display: flex; flex-direction: column; gap: 12px; transition: transform .15s, border-color .15s;
+}
+.game-card:hover:not([disabled]) { transform: translateY(-2px); border-color: var(--ink); }
+.game-card[disabled] { cursor: default; opacity: .6; background: transparent; border-style: dashed; }
+.game-card h3 { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.game-card p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+.tag {
+  align-self: flex-start; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-soft);
+}
+.tag.live { border-color: var(--hit); color: var(--hit); }
+.mini { display: flex; gap: 5px; }
+.mini span {
+  width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; border: 1.5px solid var(--rule);
+  font-family: var(--font-digit); font-weight: 700; font-size: 0.95rem;
+}
+.mini { align-items: center; }
+.mini-hint { font-style: normal; font-size: 0.7rem; line-height: 1.25; color: var(--ink-soft); padding-left: 4px; font-weight: 600; }
+.mini .g { background: var(--hit); border-color: var(--hit); color: var(--on-hit); }
+.mini .y { background: var(--near); border-color: var(--near); color: var(--on-near); }
+.mini .b { color: var(--miss-ink); }
+
+/* ---------- game view ---------- */
+.game { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.game-head { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.game-head h2 { margin: 0; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+.diff {
+  align-self: flex-start; display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px;
+  border: 1.5px solid var(--rule); background: var(--card); margin-block: 2px 4px;
+}
+.diff button {
+  border: none; background: transparent; border-radius: 999px; padding: 6px 13px; cursor: pointer;
+  font-weight: 700; font-size: 0.9rem; color: var(--ink-soft);
+}
+.diff button:hover { color: var(--ink); }
+.diff button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+.hintbar {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 14px; border: 1.5px dashed var(--rule); border-radius: 14px; background: var(--card);
+}
+.hintbar { width: min(100%, 440px); flex-direction: column; align-items: stretch; }
+.clues { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; counter-reset: clue; }
+.clues:empty::before { content: "No clues yet. Clues describe the whole code, never a single spot."; color: var(--ink-soft); font-size: 0.88rem; text-align: center; display: block; }
+.clues li {
+  counter-increment: clue; display: flex; gap: 10px; align-items: baseline; font-size: 0.95rem; line-height: 1.35;
+}
+.clues li::before {
+  content: counter(clue); flex: none; width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%;
+  background: var(--near); color: var(--on-near); font-family: var(--font-digit); font-size: 0.75rem; font-weight: 700;
+}
+.clues li.new { animation: pop .3s ease-out; }
+.hintbar .btn { align-self: center; }
+.hintbar .btn { padding: 8px 16px; font-size: 0.9rem; }
+.hintbar .btn:disabled { opacity: .45; cursor: default; }
+.board.easy .row { grid-template-columns: repeat(4, var(--tile)); }
+.board.easy .hint { display: none; }
+.stats-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); margin-bottom: -12px; }
+.rules { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem; color: var(--ink-soft); }
+.legend span { display: inline-block; }
+.legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1.5px solid var(--rule); vertical-align: -2px; margin-right: 6px; }
+.legend .lg { background: var(--hit); border-color: var(--hit); }
+.legend .ly { background: var(--near); border-color: var(--near); }
+
+.board { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: repeat(4, var(--tile)) minmax(84px, auto); gap: 8px; align-items: center; position: relative; }
+.hint { display: flex; flex-direction: column; gap: 3px; padding-left: 4px; }
+.hint span {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); white-space: nowrap;
+}
+.hint b {
+  min-width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 6px;
+  font-family: var(--font-digit); font-size: 0.85rem; font-variant-numeric: tabular-nums;
+}
+.hint .in b { background: var(--near); color: var(--on-near); }
+.hint .pl b { background: var(--hit); color: var(--on-hit); }
+.hint .zero b { background: transparent; color: var(--miss-ink); border: 1.5px dashed var(--rule); }
+.hint.reveal { animation: pop .3s ease-out both; animation-delay: 300ms; }
+.tile.done { background: var(--card); border-color: var(--ink-soft); color: var(--ink); }
+.tile.masked, .legend .lm {
+  background: repeating-linear-gradient(45deg, var(--grid) 0 5px, var(--card) 5px 10px);
+  border-color: var(--rule);
+}
+.tile.masked { animation: fadeMask .3s ease-out; }
+@keyframes fadeMask { from { opacity: .3; } }
+.board { --tile: clamp(52px, 14vw, 62px); }
+.row-num {
+  position: absolute; right: calc(100% + 10px); font-family: var(--font-digit); font-size: 0.75rem; color: var(--miss-ink);
+  font-variant-numeric: tabular-nums;
+}
+.tile {
+  width: var(--tile); height: var(--tile); display: grid; place-items: center; border-radius: 10px;
+  border: 2px solid var(--rule); background: var(--card);
+  font-family: var(--font-digit); font-weight: 700; font-size: calc(var(--tile) * 0.48);
+  font-variant-numeric: tabular-nums; user-select: none;
+}
+.tile.filled { border-color: var(--ink-soft); animation: pop .12s ease-out; }
+.tile.g { background: var(--hit); border-color: var(--hit); color: var(--on-hit); }
+.tile.y { background: var(--near); border-color: var(--near); color: var(--on-near); }
+.tile.b { background: var(--card); border-color: var(--rule); color: var(--ink-soft); }
+.tile.reveal { animation: flip .38s ease-out both; }
+.row.shake { animation: shake .35s; }
+@keyframes pop { 50% { transform: scale(1.08); } }
+@keyframes flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+@keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+@media (prefers-reduced-motion: reduce) { .tile, .row, .game-card { animation: none !important; transition: none !important; } }
+
+.status {
+  min-height: 1.6em; text-align: center; font-weight: 600; font-size: 1rem;
+}
+.status.win { color: var(--hit); }
+.status.lose { color: var(--ink); }
+.status .code { font-family: var(--font-digit); letter-spacing: .15em; background: var(--card); border: 1.5px solid var(--rule); border-radius: 6px; padding: 1px 8px; }
+
+.pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: min(100%, 380px); }
+.key {
+  height: 52px; border-radius: 10px; border: 1.5px solid var(--rule); background: var(--card); cursor: pointer;
+  font-family: var(--font-digit); font-weight: 700; font-size: 1.3rem; transition: transform .06s;
+}
+.key:active { transform: scale(.95); }
+.key.g { background: var(--hit); border-color: var(--hit); color: var(--on-hit); }
+.key.y { background: var(--near); border-color: var(--near); color: var(--on-near); }
+.key.b { color: var(--miss-ink); background: transparent; border-style: dashed; }
+.key.wide { grid-column: span 2; font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
+.key.enter { grid-column: span 3; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.key.enter:disabled { opacity: .35; cursor: default; }
+
+.after { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  border-radius: 999px; padding: 10px 22px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--ink);
+  background: var(--ink); color: var(--paper);
+}
+.btn.ghost { background: var(--card); color: var(--ink); border-color: var(--rule); }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: min(100%, 380px); }
+.stat { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.stat b { font-family: var(--font-digit); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.stat small { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); text-align: center; }
+
+/* ---------- make 24 ---------- */
+/* Order on screen: clock, cards, operations, answer bar, then actions, so the play area fits in one view. */
+#make-24 { gap: 14px; }
+#make-24 .game-head { gap: 8px; }
+.m24-howto { color: var(--ink-soft); max-width: 62ch; font-size: 0.92rem; }
+.m24-howto summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.m24-howto summary span { color: var(--accent); font-weight: 700; margin-left: 6px; font-size: 0.85rem; }
+.m24-howto[open] summary span { display: none; }
+.m24-howto p { margin: 8px 0 0; }
+.keys { font-size: 0.85rem; }
+kbd {
+  font-family: var(--font-digit); font-size: 0.78rem; padding: 0 5px; border: 1px solid var(--rule);
+  border-bottom-width: 2px; border-radius: 4px; background: var(--card); color: var(--ink);
+}
+.m24-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; justify-content: center; font-size: 0.85rem; color: var(--ink-soft); }
+.m24-bar > span b { font-family: var(--font-digit); color: var(--ink); letter-spacing: .06em; margin-left: 4px; }
+.watch { display: inline-flex; align-items: center; gap: 6px; }
+.watch b { font-family: var(--font-digit); font-size: 1.15rem; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 5.2ch; text-align: right; }
+.watch-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hit); }
+.watch-dot.off { background: var(--miss-ink); }
+.watch-btn {
+  border: 1.5px solid var(--rule); background: var(--card); border-radius: 999px; padding: 2px 10px; cursor: pointer;
+  font-size: 0.78rem; font-weight: 700;
+}
+.watch-btn:hover:not(:disabled) { border-color: var(--ink-soft); }
+.watch-btn:disabled { opacity: .4; cursor: default; }
+
+.m24-play { width: min(100%, 420px); display: flex; flex-direction: column; gap: 10px; }
+.m24-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.m24-tile {
+  height: 76px; border-radius: 14px; border: 2px solid var(--rule); background: var(--card);
+  display: grid; place-items: center; cursor: pointer; transition: transform .1s, border-color .12s, opacity .15s;
+}
+.m24-tile b { font-family: var(--font-digit); font-size: 2.2rem; line-height: 1; }
+.m24-tile:hover:not(:disabled) { border-color: var(--ink-soft); }
+.m24-tile:active:not(:disabled) { transform: scale(.95); }
+.m24-tile.used { opacity: .28; cursor: default; }
+.m24-ops { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.op {
+  height: 50px; border-radius: 12px; border: 1.5px solid var(--rule); background: var(--card);
+  font-size: 1.6rem; font-weight: 700; cursor: pointer; line-height: 1;
+}
+.op:hover { border-color: var(--ink-soft); }
+.op:active { transform: scale(.95); }
+.op.paren { color: var(--accent); }
+.m24-tiles.paused, .m24-line.paused { filter: blur(9px); pointer-events: none; user-select: none; }
+
+.m24-line {
+  min-height: 66px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px;
+  border: 2px solid var(--ink-soft); background: var(--card); cursor: text;
+}
+.m24-line:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.m24-line.shake { animation: shake .35s; }
+.m24-line.win { border-color: var(--hit); cursor: default; }
+.m24-line-text {
+  flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; min-height: 1.7em;
+  font-family: var(--font-digit); font-weight: 700; font-size: 1.35rem; line-height: 1.3;
+}
+.tok { padding: 0 2px; border-radius: 4px; }
+.tok.t-op { padding: 0 7px; }
+.m24-line:not(.win) .tok:hover { background: var(--paper); }
+.m24-line-text .placeholder { font-family: var(--font-display); font-weight: 400; font-size: 0.95rem; color: var(--miss-ink); padding-left: 4px; }
+.caret { display: inline-block; width: 2px; height: 1.15em; background: var(--accent); margin: 0 1px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.m24-line-val { flex: none; font-family: var(--font-digit); font-size: 1rem; color: var(--ink-soft); white-space: nowrap; }
+.m24-line-val.hit { color: var(--hit); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+
+.m24-solution {
+  font-family: var(--font-digit); font-size: 1.05rem; background: var(--card); border: 1.5px dashed var(--rule);
+  border-radius: 12px; padding: 10px 16px; text-align: center; max-width: 100%; overflow-wrap: anywhere;
+}
+.m24-solution small { display: block; font-family: var(--font-display); font-size: 0.75rem; color: var(--ink-soft); margin-bottom: 2px; }
+.m24-actions .btn { padding: 8px 16px; font-size: 0.9rem; }
+.m24-actions .btn:disabled { opacity: .4; cursor: default; }
+.m24-expr {
+  font-family: var(--font-digit); font-size: 1.1rem; color: var(--ink) !important; background: var(--paper);
+  border-radius: 10px; padding: 8px 14px; overflow-wrap: anywhere;
+}
+#make-24 .status { min-height: 1.4em; margin-top: -4px; }
+@media (max-width: 420px) {
+  .m24-tile { height: 64px; }
+  .m24-tile b { font-size: 1.9rem; }
+  .op { height: 46px; font-size: 1.4rem; }
+}
+
+/* ---------- win popup ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  animation: fade .2s ease-out;
+}
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 51; }
+.win-card {
+  position: relative; z-index: 52; width: min(100%, 380px); background: var(--card); border: 1.5px solid var(--rule);
+  border-radius: 18px; padding: 28px 24px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center; box-shadow: 0 24px 60px -20px rgba(0,0,0,.45); animation: rise .35s cubic-bezier(.2,1.4,.4,1);
+}
+.win-card .eyebrow { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--hit); }
+.win-card h2 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; }
+.win-card p { margin: 0; color: var(--ink-soft); }
+.win-code { display: flex; gap: 8px; }
+.win-code span {
+  width: 52px; height: 52px; display: grid; place-items: center; border-radius: 10px;
+  background: var(--hit); color: var(--on-hit); font-family: var(--font-digit); font-weight: 700; font-size: 1.6rem;
+  animation: flip .4s ease-out both;
+}
+.win-code span:nth-child(2) { animation-delay: .08s; }
+.win-code span:nth-child(3) { animation-delay: .16s; }
+.win-code span:nth-child(4) { animation-delay: .24s; }
+.win-card.lost .eyebrow { color: var(--ink-soft); }
+.win-card.lost .win-code span { background: var(--paper); color: var(--ink); border: 2px solid var(--ink-soft); }
+.win-card .stats { width: 100%; padding-block: 12px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.win-close {
+  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: transparent; color: var(--ink-soft); font-size: 1.3rem; cursor: pointer; line-height: 1;
+}
+.win-close:hover { background: var(--paper); color: var(--ink); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(24px) scale(.94); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .overlay, .win-card, .win-code span { animation: none !important; } }
+
+@media (max-width: 420px) {
+  .row-num { display: none; }
+  .key { height: 48px; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip" onclick="event.preventDefault(); document.getElementById('main').focus();">Skip to the games</a>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <h1>Digit Den<span class="d">.</span></h1>
+      <p id="tagline">Small puzzles for numbers people.</p>
+    </div>
+    <div class="top-tools">
+      <button class="back" id="backBtn" type="button" hidden data-i18n="back">← All games</button>
+      <label class="lang"><span class="sr-only" data-i18n="lang_label">Language</span>
+        <select id="langSel">
+          <option value="en" lang="en">English</option>
+          <option value="es" lang="es">Español</option>
+          <option value="fr" lang="fr">Français</option>
+          <option value="zh" lang="zh-Hans">中文</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+
+  <!-- HUB -->
+  <section id="hub" aria-label="Games" data-i18n-aria="hub_aria">
+    <div class="games">
+      <button class="game-card" type="button" id="open-crack" data-game="crack-the-code">
+        <span class="tag live" data-i18n="play">Play</span>
+        <h3 data-i18n="crack_name">Crack the Code</h3>
+        <p data-i18n="crack_desc">Find the hidden 4-digit code. Four levels, from color clues on every digit to bare counts played from memory.</p>
+        <div class="mini" aria-hidden="true"><span>3</span><span>8</span><span>1</span><span>1</span><em class="mini-hint" data-i18n-html="mini_hint">2 in code<br>1 in place</em></div>
+      </button>
+      <button class="game-card" type="button" id="open-24">
+        <span class="tag live" data-i18n="play">Play</span>
+        <h3 data-i18n="m24_name">Make 24</h3>
+        <p data-i18n="m24_desc">Combine four numbers with + − × ÷ to hit exactly 24.</p>
+        <div class="mini" aria-hidden="true"><span>4</span><span>7</span><span>8</span><span>8</span></div>
+      </button>
+      <button class="game-card" type="button" disabled>
+        <span class="tag" data-i18n="soon">Coming soon</span>
+        <h3 data-i18n="seq_name">Sequence Sleuth</h3>
+        <p data-i18n="seq_desc">Spot the rule and name the next number in the pattern.</p>
+        <div class="mini" aria-hidden="true"><span>2</span><span>6</span><span>12</span><span>?</span></div>
+      </button>
+    </div>
+  </section>
+
+  <!-- CRACK THE CODE -->
+  <section id="crack-the-code" class="game" hidden aria-label="Crack the Code" data-i18n-aria="crack_name">
+    <div class="game-head">
+      <h2 data-i18n="crack_name">Crack the Code</h2>
+      <div class="diff" role="radiogroup" aria-label="Difficulty" data-i18n-aria="difficulty" id="diff">
+        <button type="button" role="radio" data-mode="easy" id="mode-easy" data-i18n="mode_easy">Easy</button>
+        <button type="button" role="radio" data-mode="medium" id="mode-medium" data-i18n="mode_medium">Medium</button>
+        <button type="button" role="radio" data-mode="hard" id="mode-hard" data-i18n="mode_hard">Hard</button>
+        <button type="button" role="radio" data-mode="extreme" id="mode-extreme" data-i18n="mode_extreme">Extreme</button>
+      </div>
+      <p class="rules" id="rules"></p>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="hintbar" id="hintBar" hidden>
+      <ol class="clues" id="clueList" aria-label="Clues" data-i18n-aria="clues"></ol>
+      <button class="btn ghost" type="button" id="hintBtn">Ask for a clue</button>
+    </div>
+    <div class="board" id="board" role="grid" aria-label="Guesses" data-i18n-aria="guesses"></div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+
+    <div class="pad" id="pad"></div>
+
+    <div class="after" id="after" hidden>
+      <button class="btn" type="button" id="newGame" data-i18n="new_code">New code</button>
+      <button class="btn ghost" type="button" id="toHub" data-i18n="other_games">Other games</button>
+    </div>
+
+    <small class="stats-label" id="statsLabel">Your stats</small>
+    <div class="stats" aria-label="Your stats" data-i18n-aria="your_stats">
+      <div class="stat"><b id="st-played">0</b><small data-i18n="played">Played</small></div>
+      <div class="stat"><b id="st-win">0%</b><small data-i18n="won">Won</small></div>
+      <div class="stat"><b id="st-streak">0</b><small data-i18n="streak">Streak</small></div>
+      <div class="stat"><b id="st-best">–</b><small data-i18n="best">Best</small></div>
+    </div>
+  </section>
+
+  <!-- MAKE 24 -->
+  <section id="make-24" class="game" hidden aria-label="Make 24" data-i18n-aria="m24_name">
+    <div class="game-head">
+      <h2 data-i18n="m24_name">Make 24</h2>
+      <div class="diff" role="radiogroup" aria-label="Number range" data-i18n-aria="range_aria" id="m24Range">
+        <button type="button" role="radio" data-range="9" id="m24-r9" data-i18n="range9">Numbers 1–9</button>
+        <button type="button" role="radio" data-range="13" id="m24-r13" data-i18n="range13">Numbers 1–13</button>
+      </div>
+      <details class="m24-howto" id="m24HowTo">
+        <summary data-i18n-html="howto_summary">Use all four numbers once, with + − × ÷ and parentheses, to make 24.<span>How to play</span></summary>
+        <p data-i18n="howto_p">Tap the cards and buttons to write your answer. Tap anywhere in the answer bar to move the cursor, and new pieces go in at the cursor. The answer is checked as soon as all four numbers are in and every parenthesis is closed. × and ÷ go before + and −, so use parentheses to change the order.</p>
+        <p class="keys" data-i18n-html="howto_keys">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> add a card, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> add a symbol, <kbd>←</kbd> <kbd>→</kbd> move the cursor, <kbd>Backspace</kbd> deletes.</p>
+      </details>
+    </div>
+
+    <div class="m24-bar">
+      <span><span data-i18n="puzzle">Puzzle</span> <b id="m24Orig">–</b></span>
+      <div class="watch" role="timer" aria-label="Stopwatch" data-i18n-aria="stopwatch">
+        <span class="watch-dot" id="m24Dot" aria-hidden="true"></span>
+        <b id="m24Time">0:00.0</b>
+      </div>
+    </div>
+
+    <div class="m24-play">
+      <div class="m24-tiles" id="m24Tiles" aria-label="Number cards" data-i18n-aria="cards_aria"></div>
+
+      <div class="m24-ops" id="m24Ops" role="group" aria-label="Operations" data-i18n-aria="ops_aria">
+        <button type="button" class="op" data-op="+" aria-label="Add" data-i18n-aria="op_add">+</button>
+        <button type="button" class="op" data-op="−" aria-label="Subtract" data-i18n-aria="op_sub">−</button>
+        <button type="button" class="op" data-op="×" aria-label="Multiply" data-i18n-aria="op_mul">×</button>
+        <button type="button" class="op" data-op="÷" aria-label="Divide" data-i18n-aria="op_div">÷</button>
+        <button type="button" class="op paren" data-op="(" aria-label="Open parenthesis" data-i18n-aria="op_open">(</button>
+        <button type="button" class="op paren" data-op=")" aria-label="Close parenthesis" data-i18n-aria="op_close">)</button>
+      </div>
+
+      <div class="m24-line" id="m24Line" tabindex="0" role="textbox" aria-label="Your answer">
+        <span class="m24-line-text" id="m24LineText"></span>
+        <span class="m24-line-val" id="m24LineVal"></span>
+      </div>
+    </div>
+
+    <div class="status" id="m24Status" role="status" aria-live="polite"></div>
+    <div class="m24-solution" id="m24Sol" hidden></div>
+
+    <div class="after m24-actions">
+      <button class="btn ghost" type="button" id="m24Undo" data-i18n="btn_delete">Delete</button>
+      <button class="btn ghost" type="button" id="m24Reset" data-i18n="btn_clear">Clear</button>
+      <button class="btn ghost" type="button" id="m24Show" data-i18n="btn_show">Show a solution</button>
+      <button class="btn" type="button" id="m24New" data-i18n="btn_new">New puzzle</button>
+    </div>
+
+    <small class="stats-label" data-i18n="m24_stats">Make 24 stats</small>
+    <div class="stats" aria-label="Make 24 stats" data-i18n-aria="m24_stats">
+      <div class="stat"><b id="m24-solved">0</b><small data-i18n="solved">Solved</small></div>
+      <div class="stat"><b id="m24-streak">0</b><small data-i18n="streak">Streak</small></div>
+      <div class="stat"><b id="m24-top">0</b><small data-i18n="top_streak">Top streak</small></div>
+      <div class="stat"><b id="m24-best">–</b><small data-i18n="fastest">Fastest</small></div>
+    </div>
+  </section>
+  </main>
+</div>
+
+<div class="overlay" id="m24Overlay" hidden>
+  <div class="win-card" role="dialog" aria-modal="true" aria-labelledby="m24WinTitle">
+    <button class="win-close" type="button" id="m24WinClose" aria-label="Close" data-i18n-aria="close">×</button>
+    <span class="eyebrow" id="m24WinEyebrow">Made 24</span>
+    <h2 id="m24WinTitle">Twenty-four!</h2>
+    <p class="m24-expr" id="m24WinExpr"></p>
+    <p id="m24WinMsg"></p>
+    <div class="stats" aria-label="Make 24 stats" data-i18n-aria="m24_stats">
+      <div class="stat"><b id="m24w-solved">0</b><small data-i18n="solved">Solved</small></div>
+      <div class="stat"><b id="m24w-streak">0</b><small data-i18n="streak">Streak</small></div>
+      <div class="stat"><b id="m24w-top">0</b><small data-i18n="top_streak">Top streak</small></div>
+      <div class="stat"><b id="m24w-best">–</b><small data-i18n="fastest">Fastest</small></div>
+    </div>
+    <div class="after">
+      <button class="btn" type="button" id="m24WinNext" data-i18n="next_puzzle">Next puzzle</button>
+      <button class="btn ghost" type="button" id="m24WinHub" data-i18n="other_games">Other games</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay" hidden>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="win-card" id="winCard" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <button class="win-close" type="button" id="winClose" aria-label="Close" data-i18n-aria="close">×</button>
+    <span class="eyebrow" id="winEyebrow">Code cracked</span>
+    <h2 id="winTitle">Congratulations!</h2>
+    <div class="win-code" id="winCode"></div>
+    <p id="winMsg"></p>
+    <div class="stats" aria-label="Your stats" data-i18n-aria="your_stats">
+      <div class="stat"><b id="w-played">0</b><small data-i18n="played">Played</small></div>
+      <div class="stat"><b id="w-win">0%</b><small data-i18n="won">Won</small></div>
+      <div class="stat"><b id="w-streak">0</b><small data-i18n="streak">Streak</small></div>
+      <div class="stat"><b id="w-best">–</b><small data-i18n="best">Best</small></div>
+    </div>
+    <div class="after">
+      <button class="btn" type="button" id="winAgain">Play again</button>
+      <button class="btn ghost" type="button" id="winHub" data-i18n="other_games">Other games</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ---------- storage helpers (never required) ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  /* ---------- languages ---------- */
+  // Every piece of text on the page comes from here. Functions take the numbers they need.
+  const S = (a, b) => (a === 1 ? '' : b);
+  const STR = {
+    en: {
+      lang_label: 'Language', skip: 'Skip to the games',
+      tag_hub: 'Small puzzles for numbers people.',
+      tag_crack: 'Pick a guess. Read the clues. Narrow it down.',
+      tag_24: 'Four numbers, four operations, one target.',
+      back: '← All games', hub_aria: 'Games', play: 'Play', soon: 'Coming soon',
+      crack_name: 'Crack the Code',
+      crack_desc: 'Find the hidden 4-digit code. Four levels, from color clues on every digit to bare counts played from memory.',
+      m24_name: 'Make 24', m24_desc: 'Combine four numbers with + − × ÷ to hit exactly 24.',
+      seq_name: 'Sequence Sleuth', seq_desc: 'Spot the rule and name the next number in the pattern.',
+      mini_hint: '2 in code<br>1 in place',
+      difficulty: 'Difficulty', mode_easy: 'Easy', mode_medium: 'Medium', mode_hard: 'Hard', mode_extreme: 'Extreme',
+      rules_easy: 'A secret code of 4 digits (0–9) is hidden. Digits can repeat, like 7 7 0 2. Type a guess and press Enter. Every digit you guess gets its own color.',
+      rules_medium: 'A secret code of 4 digits (0–9) is hidden. Digits can repeat. Digits that are in the code turn yellow, but yellow does not say whether they are in the right spot. A separate count tells you how many are, without saying which. Stuck? Ask for a clue (3 per game). Clues describe the code as a whole, like a digit it does not contain or what its digits add up to.',
+      rules_hard: 'A secret code of 4 digits (0–9) is hidden. Digits can repeat. Each guess gets two numbers, but you are not told which digits they refer to.',
+      rules_extreme: 'Hard mode, from memory. Each guess gets the same two counts, but your digits vanish a moment after you submit. Remember what you typed: only the counts stay on the board. All guesses are shown again when the game ends.',
+      legend_easy: '<span><i class="lg"></i>Right digit, right spot</span><span><i class="ly"></i>In the code, different spot</span><span><i></i>Not in the code (or no more copies)</span>',
+      legend_medium: '<span><i class="ly"></i>In the code (right spot or not)</span><span><i></i>Not in the code (or no more copies)</span><span><i class="lg"></i><strong>in place</strong>: how many digits are in exactly the right spot</span>',
+      legend_hard: '<span><i class="ly"></i><strong>in code</strong>: how many of your digits appear in the code (including ones in the right spot)</span><span><i class="lg"></i><strong>in place</strong>: how many of those are in exactly the right spot</span>',
+      legend_extreme: '<span><i class="ly"></i><strong>in code</strong>: how many of your digits appear in the code</span><span><i class="lg"></i><strong>in place</strong>: how many are in exactly the right spot</span><span><i class="lm"></i>A hidden guess</span>',
+      tries_n: n => ` You get ${n} guesses.`,
+      stats_mode: l => `${l} stats`,
+      clues: 'Clues', guesses: 'Guesses', new_code: 'New code', other_games: 'Other games',
+      your_stats: 'Your stats', played: 'Played', won: 'Won', streak: 'Streak', best: 'Best',
+      status_new_mode: (l, n) => `New ${l} code. ${n} guesses.`,
+      digit: d => `Digit ${d}`, key_delete: '⌫ Delete', key_enter: 'Enter',
+      tile_g: 'correct spot', tile_y_easy: 'in code, wrong spot', tile_y: 'in code', tile_b: 'no match',
+      in_code: 'in code', in_place: 'in place',
+      hint_aria_pl: n => `${n} in place`, hint_aria_both: (a, b) => `${a} in code, ${b} in place`,
+      hidden_digit: 'hidden guess digit',
+      enter_all: 'Enter all 4 digits first.',
+      left_n: n => `${n} guess${S(n, 'es')} left`,
+      welcome: 'Welcome back · ',
+      cracked_first: 'Cracked it first try!', cracked_n: n => `Cracked it in ${n} guesses.`,
+      out_status: c => `Out of guesses. The code was <span class="code">${c}</span>`,
+      praise: ['Unbelievable.', 'Brilliant deduction.', 'Sharp work.', 'Nicely reasoned.', 'Solid logic.', 'Got there.', 'Persistence pays.'],
+      win_title: 'Congratulations!', lose_title: 'Out of guesses', play_again: 'Play again', try_new: 'Try a new code',
+      win_first: 'First try! That almost never happens.',
+      win_msg: (p, n, t) => `${p} You cracked it in ${n} of ${t} guesses.`,
+      eyebrow_win: l => `Code cracked · ${l}`, eyebrow_lose: l => `Code not cracked · ${l}`,
+      used_clues: h => (h ? ` You used ${h} clue${S(h, 's')}.` : ' No clues needed.'),
+      lose_msg: (b, len) => `That was the code. Your closest guess had ${b} of ${len} digits in the right spot. Your streak resets, but a new code is one tap away.`,
+      close: 'Close',
+      clue_absent: d => `The code does not contain a ${d}.`,
+      clue_untried: n => (n === 0 ? 'Every digit in the code is one you have already tried.'
+        : `${n} ${n === 1 ? 'digit' : 'different digits'} you have not tried yet ${n === 1 ? 'is' : 'are'} in the code.`),
+      clue_sum: s => `The four digits add up to ${s}.`,
+      clue_even: n => `The code has ${n} even digit${S(n, 's')} (0 counts as even).`,
+      clue_repeats: n => (n === 4 ? 'No digit appears more than once.' : n === 1 ? 'The code is one digit repeated four times.'
+        : `The code uses only ${n} different digits, so something repeats.`),
+      clue_ends: c => ({ same: 'The first and last digits are the same.', gt: 'The first digit is bigger than the last.', lt: 'The first digit is smaller than the last.' })[c],
+      clue_spotParity: (p, odd) => `The ${['first', 'second', 'third', 'fourth'][p]} digit is ${odd ? 'odd' : 'even'}.`,
+      clue_big: n => `${n} of the digits ${n === 1 ? 'is' : 'are'} 5 or higher.`,
+      ask_clue: n => `Ask for a clue (${n} left)`, no_clues: 'No clues left',
+      no_new_clue: 'No new clue to give right now.', clue_added: 'New clue added.',
+      range_aria: 'Number range', range9: 'Numbers 1–9', range13: 'Numbers 1–13',
+      howto_summary: 'Use all four numbers once, with + − × ÷ and parentheses, to make 24.<span>How to play</span>',
+      howto_p: 'Tap the cards and buttons to write your answer. Tap anywhere in the answer bar to move the cursor, and new pieces go in at the cursor. The answer is checked as soon as all four numbers are in and every parenthesis is closed. × and ÷ go before + and −, so use parentheses to change the order.',
+      howto_keys: 'Keyboard: <kbd>1</kbd>–<kbd>4</kbd> add a card, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> add a symbol, <kbd>←</kbd> <kbd>→</kbd> move the cursor, <kbd>Backspace</kbd> deletes.',
+      puzzle: 'Puzzle', stopwatch: 'Stopwatch', cards_aria: 'Number cards', ops_aria: 'Operations',
+      op_add: 'Add', op_sub: 'Subtract', op_mul: 'Multiply', op_div: 'Divide', op_open: 'Open parenthesis', op_close: 'Close parenthesis',
+      answer: 'Your answer', answer_is: s => `Your answer: ${s}`, empty: 'empty',
+      btn_delete: 'Delete', btn_clear: 'Clear', btn_show: 'Show a solution', btn_new: 'New puzzle',
+      m24_stats: 'Make 24 stats', solved: 'Solved', top_streak: 'Top streak', fastest: 'Fastest',
+      e_two_ops: 'Two operations in a row need a number between them.',
+      e_after_paren: 'Put a number right after "(".',
+      e_start: 'Start with a number or "(".',
+      e_empty_paren: 'There is an empty or unfinished pair of parentheses.',
+      e_need_op_num: 'Put an operation between two numbers.',
+      e_need_op_paren: 'Put an operation before "(".',
+      e_stray_close: 'There is a ")" with no "(" before it.',
+      e_end: 'The answer has to end with a number or ")".',
+      e_close: n => `Close ${n} more parenthes${n > 1 ? 'es' : 'is'}.`,
+      card: (i, n, used) => `Card ${i}: ${n}` + (used ? ', used' : ''),
+      placeholder: 'Tap the numbers above to start',
+      open_n: n => `${n} open (`,
+      once: 'Each card can only be used once.',
+      div_zero: 'That divides by zero somewhere. Change a step and try again.',
+      makes: v => `That makes ${v}, not 24.`,
+      one_way: 'One way to make 24',
+      sol_no_count: 'Solving it now will not count toward your stats.',
+      cheers: ['Twenty-four!', 'Nailed it!', 'Spot on!', 'Exactly 24!'],
+      shown_msg: 'Solved with the answer showing, so this one does not count. Try the next one on your own.',
+      solved_in: c => `Solved in ${c}.`, fastest_yet: ' That is your fastest yet.', in_row: n => ` ${n} in a row.`,
+      solved_status: e => `Solved: ${e} = 24`, made24: s => `Made 24 · ${s}`,
+      new_range: r => `New puzzle with numbers from 1 to ${r}.`, next_puzzle: 'Next puzzle'
+    },
+    es: {
+      lang_label: 'Idioma', skip: 'Saltar a los juegos',
+      tag_hub: 'Pequeños acertijos para amantes de los números.',
+      tag_crack: 'Prueba un código. Lee las pistas. Descarta opciones.',
+      tag_24: 'Cuatro números, cuatro operaciones, un objetivo.',
+      back: '← Todos los juegos', hub_aria: 'Juegos', play: 'Jugar', soon: 'Próximamente',
+      crack_name: 'Descifra el código',
+      crack_desc: 'Encuentra el código secreto de 4 cifras. Cuatro niveles, desde colores en cada cifra hasta solo recuentos, jugados de memoria.',
+      m24_name: 'Haz 24', m24_desc: 'Combina cuatro números con + − × ÷ para llegar exactamente a 24.',
+      seq_name: 'Detective de secuencias', seq_desc: 'Descubre la regla y di el siguiente número del patrón.',
+      mini_hint: '2 en código<br>1 en su sitio',
+      difficulty: 'Dificultad', mode_easy: 'Fácil', mode_medium: 'Medio', mode_hard: 'Difícil', mode_extreme: 'Extremo',
+      rules_easy: 'Hay un código secreto de 4 cifras (0–9). Las cifras pueden repetirse, como 7 7 0 2. Escribe un intento y pulsa Intro. Cada cifra que pruebes recibe su propio color.',
+      rules_medium: 'Hay un código secreto de 4 cifras (0–9). Las cifras pueden repetirse. Las cifras que están en el código se vuelven amarillas, pero el amarillo no dice si están en su sitio. Un recuento aparte te dice cuántas lo están, sin decir cuáles. ¿Atascado? Pide una pista (3 por partida). Las pistas describen el código en conjunto, como una cifra que no contiene o lo que suman sus cifras.',
+      rules_hard: 'Hay un código secreto de 4 cifras (0–9). Las cifras pueden repetirse. Cada intento recibe dos números, pero no se te dice a qué cifras se refieren.',
+      rules_extreme: 'El modo difícil, de memoria. Cada intento recibe los mismos dos recuentos, pero tus cifras desaparecen un momento después de enviarlas. Recuerda lo que escribiste: en el tablero solo quedan los recuentos. Todos los intentos se vuelven a mostrar al terminar la partida.',
+      legend_easy: '<span><i class="lg"></i>Cifra correcta, sitio correcto</span><span><i class="ly"></i>En el código, en otro sitio</span><span><i></i>No está en el código (o no quedan más copias)</span>',
+      legend_medium: '<span><i class="ly"></i>En el código (en su sitio o no)</span><span><i></i>No está en el código (o no quedan más copias)</span><span><i class="lg"></i><strong>en su sitio</strong>: cuántas cifras están exactamente en el sitio correcto</span>',
+      legend_hard: '<span><i class="ly"></i><strong>en código</strong>: cuántas de tus cifras aparecen en el código (incluidas las que están en su sitio)</span><span><i class="lg"></i><strong>en su sitio</strong>: cuántas de ellas están exactamente en el sitio correcto</span>',
+      legend_extreme: '<span><i class="ly"></i><strong>en código</strong>: cuántas de tus cifras aparecen en el código</span><span><i class="lg"></i><strong>en su sitio</strong>: cuántas están exactamente en el sitio correcto</span><span><i class="lm"></i>Un intento oculto</span>',
+      tries_n: n => ` Tienes ${n} intentos.`,
+      stats_mode: l => `Estadísticas: ${l}`,
+      clues: 'Pistas', guesses: 'Intentos', new_code: 'Nuevo código', other_games: 'Otros juegos',
+      your_stats: 'Tus estadísticas', played: 'Jugadas', won: 'Ganadas', streak: 'Racha', best: 'Mejor',
+      status_new_mode: (l, n) => `Nuevo código (${l}). ${n} intentos.`,
+      digit: d => `Cifra ${d}`, key_delete: '⌫ Borrar', key_enter: 'Intro',
+      tile_g: 'sitio correcto', tile_y_easy: 'en el código, sitio incorrecto', tile_y: 'en el código', tile_b: 'no coincide',
+      in_code: 'en código', in_place: 'en su sitio',
+      hint_aria_pl: n => `${n} en su sitio`, hint_aria_both: (a, b) => `${a} en código, ${b} en su sitio`,
+      hidden_digit: 'cifra oculta',
+      enter_all: 'Primero escribe las 4 cifras.',
+      left_n: n => (n === 1 ? 'Queda 1 intento' : `Quedan ${n} intentos`),
+      welcome: 'Hola de nuevo · ',
+      cracked_first: '¡Descifrado al primer intento!', cracked_n: n => `Descifrado en ${n} intentos.`,
+      out_status: c => `Sin intentos. El código era <span class="code">${c}</span>`,
+      praise: ['Increíble.', 'Deducción brillante.', 'Muy agudo.', 'Bien razonado.', 'Lógica sólida.', 'Lo lograste.', 'La constancia tiene premio.'],
+      win_title: '¡Enhorabuena!', lose_title: 'Sin intentos', play_again: 'Jugar otra vez', try_new: 'Probar un código nuevo',
+      win_first: '¡Al primer intento! Eso casi nunca pasa.',
+      win_msg: (p, n, t) => `${p} Lo descifraste en ${n} de ${t} intentos.`,
+      eyebrow_win: l => `Código descifrado · ${l}`, eyebrow_lose: l => `Código sin descifrar · ${l}`,
+      used_clues: h => (h ? ` Usaste ${h} pista${S(h, 's')}.` : ' Sin pistas.'),
+      lose_msg: (b, len) => `Ese era el código. Tu mejor intento tenía ${b} de ${len} cifras en su sitio. Tu racha se reinicia, pero un código nuevo está a un toque.`,
+      close: 'Cerrar',
+      clue_absent: d => `El código no contiene ningún ${d}.`,
+      clue_untried: n => (n === 0 ? 'Todas las cifras del código son cifras que ya has probado.'
+        : n === 1 ? '1 cifra que aún no has probado está en el código.' : `${n} cifras distintas que aún no has probado están en el código.`),
+      clue_sum: s => `Las cuatro cifras suman ${s}.`,
+      clue_even: n => `El código tiene ${n} ${n === 1 ? 'cifra par' : 'cifras pares'} (el 0 cuenta como par).`,
+      clue_repeats: n => (n === 4 ? 'Ninguna cifra aparece más de una vez.' : n === 1 ? 'El código es una misma cifra repetida cuatro veces.'
+        : `El código usa solo ${n} cifras distintas, así que alguna se repite.`),
+      clue_ends: c => ({ same: 'La primera y la última cifra son iguales.', gt: 'La primera cifra es mayor que la última.', lt: 'La primera cifra es menor que la última.' })[c],
+      clue_spotParity: (p, odd) => `La ${['primera', 'segunda', 'tercera', 'cuarta'][p]} cifra es ${odd ? 'impar' : 'par'}.`,
+      clue_big: n => (n === 1 ? '1 de las cifras es 5 o más.' : `${n} de las cifras son 5 o más.`),
+      ask_clue: n => `Pedir una pista (quedan ${n})`, no_clues: 'No quedan pistas',
+      no_new_clue: 'Ahora mismo no hay ninguna pista nueva.', clue_added: 'Pista nueva añadida.',
+      range_aria: 'Rango de números', range9: 'Números 1–9', range13: 'Números 1–13',
+      howto_summary: 'Usa los cuatro números una vez, con + − × ÷ y paréntesis, para hacer 24.<span>Cómo se juega</span>',
+      howto_p: 'Toca las cartas y los botones para escribir tu respuesta. Toca en cualquier parte de la barra de respuesta para mover el cursor; las piezas nuevas se insertan en el cursor. La respuesta se comprueba en cuanto están los cuatro números y todos los paréntesis cerrados. × y ÷ van antes que + y −, así que usa paréntesis para cambiar el orden.',
+      howto_keys: 'Teclado: <kbd>1</kbd>–<kbd>4</kbd> añaden una carta, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> añaden un símbolo, <kbd>←</kbd> <kbd>→</kbd> mueven el cursor, <kbd>Retroceso</kbd> borra.',
+      puzzle: 'Puzle', stopwatch: 'Cronómetro', cards_aria: 'Cartas numéricas', ops_aria: 'Operaciones',
+      op_add: 'Sumar', op_sub: 'Restar', op_mul: 'Multiplicar', op_div: 'Dividir', op_open: 'Abrir paréntesis', op_close: 'Cerrar paréntesis',
+      answer: 'Tu respuesta', answer_is: s => `Tu respuesta: ${s}`, empty: 'vacía',
+      btn_delete: 'Borrar', btn_clear: 'Limpiar', btn_show: 'Ver una solución', btn_new: 'Nuevo puzle',
+      m24_stats: 'Estadísticas de Haz 24', solved: 'Resueltos', top_streak: 'Mejor racha', fastest: 'Más rápido',
+      e_two_ops: 'Dos operaciones seguidas necesitan un número entre ellas.',
+      e_after_paren: 'Pon un número justo después de "(".',
+      e_start: 'Empieza con un número o "(".',
+      e_empty_paren: 'Hay un par de paréntesis vacío o sin terminar.',
+      e_need_op_num: 'Pon una operación entre dos números.',
+      e_need_op_paren: 'Pon una operación antes de "(".',
+      e_stray_close: 'Hay un ")" sin un "(" antes.',
+      e_end: 'La respuesta tiene que terminar con un número o ")".',
+      e_close: n => `Cierra ${n} paréntesis más.`,
+      card: (i, n, used) => `Carta ${i}: ${n}` + (used ? ', usada' : ''),
+      placeholder: 'Toca los números de arriba para empezar',
+      open_n: n => `${n} ( abierto${S(n, 's')}`,
+      once: 'Cada carta solo se puede usar una vez.',
+      div_zero: 'Ahí se divide entre cero en algún paso. Cambia un paso y vuelve a intentarlo.',
+      makes: v => `Eso da ${v}, no 24.`,
+      one_way: 'Una forma de hacer 24',
+      sol_no_count: 'Si lo resuelves ahora, no contará para tus estadísticas.',
+      cheers: ['¡Veinticuatro!', '¡Clavado!', '¡Exacto!', '¡24 justos!'],
+      shown_msg: 'Resuelto con la solución a la vista, así que este no cuenta. Prueba el siguiente por tu cuenta.',
+      solved_in: c => `Resuelto en ${c}.`, fastest_yet: ' Es tu mejor tiempo.', in_row: n => ` ${n} seguidos.`,
+      solved_status: e => `Resuelto: ${e} = 24`, made24: s => `24 conseguido · ${s}`,
+      new_range: r => `Nuevo puzle con números del 1 al ${r}.`, next_puzzle: 'Siguiente puzle'
+    },
+    fr: {
+      lang_label: 'Langue', skip: 'Aller aux jeux',
+      tag_hub: 'De petites énigmes pour les amateurs de chiffres.',
+      tag_crack: 'Proposez un code. Lisez les indices. Resserrez l’étau.',
+      tag_24: 'Quatre nombres, quatre opérations, un objectif.',
+      back: '← Tous les jeux', hub_aria: 'Jeux', play: 'Jouer', soon: 'Bientôt',
+      crack_name: 'Percez le code',
+      crack_desc: 'Trouvez le code secret à 4 chiffres. Quatre niveaux, des couleurs sur chaque chiffre jusqu’aux simples comptes, joués de mémoire.',
+      m24_name: 'Faites 24', m24_desc: 'Combinez quatre nombres avec + − × ÷ pour obtenir exactement 24.',
+      seq_name: 'Détective des suites', seq_desc: 'Trouvez la règle et donnez le nombre suivant de la suite.',
+      mini_hint: '2 dans le code<br>1 bien placé',
+      difficulty: 'Difficulté', mode_easy: 'Facile', mode_medium: 'Moyen', mode_hard: 'Difficile', mode_extreme: 'Extrême',
+      rules_easy: 'Un code secret de 4 chiffres (0–9) est caché. Les chiffres peuvent se répéter, comme 7 7 0 2. Tapez une proposition et appuyez sur Entrée. Chaque chiffre proposé reçoit sa propre couleur.',
+      rules_medium: 'Un code secret de 4 chiffres (0–9) est caché. Les chiffres peuvent se répéter. Les chiffres présents dans le code deviennent jaunes, mais le jaune ne dit pas s’ils sont bien placés. Un compte à part indique combien le sont, sans dire lesquels. Bloqué ? Demandez un indice (3 par partie). Les indices décrivent le code dans son ensemble, par exemple un chiffre qu’il ne contient pas ou la somme de ses chiffres.',
+      rules_hard: 'Un code secret de 4 chiffres (0–9) est caché. Les chiffres peuvent se répéter. Chaque proposition reçoit deux nombres, mais on ne vous dit pas à quels chiffres ils correspondent.',
+      rules_extreme: 'Le mode difficile, de mémoire. Chaque proposition reçoit les deux mêmes comptes, mais vos chiffres disparaissent un instant après l’envoi. Retenez ce que vous avez tapé : seuls les comptes restent sur la grille. Toutes les propositions réapparaissent à la fin de la partie.',
+      legend_easy: '<span><i class="lg"></i>Bon chiffre, bonne place</span><span><i class="ly"></i>Dans le code, autre place</span><span><i></i>Absent du code (ou plus d’exemplaire)</span>',
+      legend_medium: '<span><i class="ly"></i>Dans le code (bien placé ou non)</span><span><i></i>Absent du code (ou plus d’exemplaire)</span><span><i class="lg"></i><strong>bien placés</strong> : combien de chiffres sont exactement à la bonne place</span>',
+      legend_hard: '<span><i class="ly"></i><strong>dans le code</strong> : combien de vos chiffres figurent dans le code (y compris ceux bien placés)</span><span><i class="lg"></i><strong>bien placés</strong> : combien d’entre eux sont exactement à la bonne place</span>',
+      legend_extreme: '<span><i class="ly"></i><strong>dans le code</strong> : combien de vos chiffres figurent dans le code</span><span><i class="lg"></i><strong>bien placés</strong> : combien sont exactement à la bonne place</span><span><i class="lm"></i>Une proposition cachée</span>',
+      tries_n: n => ` Vous avez ${n} essais.`,
+      stats_mode: l => `Statistiques : ${l}`,
+      clues: 'Indices', guesses: 'Propositions', new_code: 'Nouveau code', other_games: 'Autres jeux',
+      your_stats: 'Vos statistiques', played: 'Parties', won: 'Gagnées', streak: 'Série', best: 'Record',
+      status_new_mode: (l, n) => `Nouveau code (${l}). ${n} essais.`,
+      digit: d => `Chiffre ${d}`, key_delete: '⌫ Effacer', key_enter: 'Entrée',
+      tile_g: 'bonne place', tile_y_easy: 'dans le code, mauvaise place', tile_y: 'dans le code', tile_b: 'absent',
+      in_code: 'dans le code', in_place: 'bien placés',
+      hint_aria_pl: n => `${n} bien placé${S(n, 's')}`, hint_aria_both: (a, b) => `${a} dans le code, ${b} bien placé${S(b, 's')}`,
+      hidden_digit: 'chiffre caché',
+      enter_all: 'Entrez d’abord les 4 chiffres.',
+      left_n: n => `Il reste ${n} essai${S(n, 's')}`,
+      welcome: 'Bon retour · ',
+      cracked_first: 'Code percé du premier coup !', cracked_n: n => `Code percé en ${n} essais.`,
+      out_status: c => `Plus d’essais. Le code était <span class="code">${c}</span>`,
+      praise: ['Incroyable.', 'Brillante déduction.', 'Bien vu.', 'Bien raisonné.', 'Logique solide.', 'Vous y êtes arrivé.', 'La persévérance paie.'],
+      win_title: 'Félicitations !', lose_title: 'Plus d’essais', play_again: 'Rejouer', try_new: 'Essayer un nouveau code',
+      win_first: 'Du premier coup ! Ça n’arrive presque jamais.',
+      win_msg: (p, n, t) => `${p} Vous l’avez percé en ${n} essais sur ${t}.`,
+      eyebrow_win: l => `Code percé · ${l}`, eyebrow_lose: l => `Code non percé · ${l}`,
+      used_clues: h => (h ? ` Vous avez utilisé ${h} indice${S(h, 's')}.` : ' Aucun indice utilisé.'),
+      lose_msg: (b, len) => `C’était le code. Votre meilleure proposition avait ${b} chiffre${S(b, 's')} sur ${len} bien placé${S(b, 's')}. Votre série repart de zéro, mais un nouveau code n’est qu’à un clic.`,
+      close: 'Fermer',
+      clue_absent: d => `Le code ne contient pas de ${d}.`,
+      clue_untried: n => (n === 0 ? 'Tous les chiffres du code sont des chiffres que vous avez déjà essayés.'
+        : n === 1 ? '1 chiffre que vous n’avez pas encore essayé est dans le code.' : `${n} chiffres différents que vous n’avez pas encore essayés sont dans le code.`),
+      clue_sum: s => `La somme des quatre chiffres est ${s}.`,
+      clue_even: n => `Le code contient ${n} chiffre${S(n, 's')} pair${S(n, 's')} (0 compte comme pair).`,
+      clue_repeats: n => (n === 4 ? 'Aucun chiffre n’apparaît plus d’une fois.' : n === 1 ? 'Le code est un seul chiffre répété quatre fois.'
+        : `Le code n’utilise que ${n} chiffres différents, donc l’un d’eux se répète.`),
+      clue_ends: c => ({ same: 'Le premier et le dernier chiffre sont identiques.', gt: 'Le premier chiffre est plus grand que le dernier.', lt: 'Le premier chiffre est plus petit que le dernier.' })[c],
+      clue_spotParity: (p, odd) => `Le ${['premier', 'deuxième', 'troisième', 'quatrième'][p]} chiffre est ${odd ? 'impair' : 'pair'}.`,
+      clue_big: n => (n === 0 ? 'Aucun chiffre n’est supérieur ou égal à 5.' : n === 1 ? '1 des chiffres est supérieur ou égal à 5.'
+        : `${n} des chiffres sont supérieurs ou égaux à 5.`),
+      ask_clue: n => `Demander un indice (${n} restant${S(n, 's')})`, no_clues: 'Plus d’indices',
+      no_new_clue: 'Pas de nouvel indice pour le moment.', clue_added: 'Nouvel indice ajouté.',
+      range_aria: 'Plage de nombres', range9: 'Nombres 1–9', range13: 'Nombres 1–13',
+      howto_summary: 'Utilisez les quatre nombres une fois, avec + − × ÷ et des parenthèses, pour faire 24.<span>Comment jouer</span>',
+      howto_p: 'Touchez les cartes et les boutons pour écrire votre réponse. Touchez n’importe où dans la barre de réponse pour déplacer le curseur ; les nouveaux éléments s’insèrent au curseur. La réponse est vérifiée dès que les quatre nombres sont placés et que toutes les parenthèses sont fermées. × et ÷ passent avant + et −, utilisez donc des parenthèses pour changer l’ordre.',
+      howto_keys: 'Clavier : <kbd>1</kbd>–<kbd>4</kbd> ajoutent une carte, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> ajoutent un symbole, <kbd>←</kbd> <kbd>→</kbd> déplacent le curseur, <kbd>Retour arrière</kbd> efface.',
+      puzzle: 'Tirage', stopwatch: 'Chronomètre', cards_aria: 'Cartes', ops_aria: 'Opérations',
+      op_add: 'Additionner', op_sub: 'Soustraire', op_mul: 'Multiplier', op_div: 'Diviser', op_open: 'Parenthèse ouvrante', op_close: 'Parenthèse fermante',
+      answer: 'Votre réponse', answer_is: s => `Votre réponse : ${s}`, empty: 'vide',
+      btn_delete: 'Effacer', btn_clear: 'Vider', btn_show: 'Voir une solution', btn_new: 'Nouveau tirage',
+      m24_stats: 'Statistiques Faites 24', solved: 'Résolus', top_streak: 'Meilleure série', fastest: 'Plus rapide',
+      e_two_ops: 'Deux opérations de suite doivent être séparées par un nombre.',
+      e_after_paren: 'Mettez un nombre juste après « ( ».',
+      e_start: 'Commencez par un nombre ou « ( ».',
+      e_empty_paren: 'Il y a une paire de parenthèses vide ou inachevée.',
+      e_need_op_num: 'Mettez une opération entre deux nombres.',
+      e_need_op_paren: 'Mettez une opération avant « ( ».',
+      e_stray_close: 'Il y a une « ) » sans « ( » avant.',
+      e_end: 'La réponse doit finir par un nombre ou « ) ».',
+      e_close: n => `Fermez encore ${n} parenthèse${S(n, 's')}.`,
+      card: (i, n, used) => `Carte ${i} : ${n}` + (used ? ', utilisée' : ''),
+      placeholder: 'Touchez les nombres ci-dessus pour commencer',
+      open_n: n => `${n} ( ouverte${S(n, 's')}`,
+      once: 'Chaque carte ne peut servir qu’une fois.',
+      div_zero: 'Il y a une division par zéro quelque part. Changez une étape et réessayez.',
+      makes: v => `Cela fait ${v}, pas 24.`,
+      one_way: 'Une façon de faire 24',
+      sol_no_count: 'Le résoudre maintenant ne comptera pas dans vos statistiques.',
+      cheers: ['Vingt-quatre !', 'Dans le mille !', 'Pile !', 'Exactement 24 !'],
+      shown_msg: 'Résolu avec la solution affichée, donc celui-ci ne compte pas. Essayez le suivant par vous-même.',
+      solved_in: c => `Résolu en ${c}.`, fastest_yet: ' C’est votre meilleur temps.', in_row: n => ` ${n} d’affilée.`,
+      solved_status: e => `Résolu : ${e} = 24`, made24: s => `24 obtenu · ${s}`,
+      new_range: r => `Nouveau tirage avec des nombres de 1 à ${r}.`, next_puzzle: 'Tirage suivant'
+    },
+    zh: {
+      lang_label: '语言', skip: '跳到游戏',
+      tag_hub: '给数字爱好者的小谜题。',
+      tag_crack: '猜一个密码，读懂提示，逐步缩小范围。',
+      tag_24: '四个数字，四种运算，一个目标。',
+      back: '← 所有游戏', hub_aria: '游戏', play: '开始', soon: '即将推出',
+      crack_name: '破解密码',
+      crack_desc: '找出隐藏的 4 位密码。共四个难度，从每位数字的颜色提示，到只凭记忆看数量提示。',
+      m24_name: '算 24', m24_desc: '用 + − × ÷ 组合四个数字，正好得到 24。',
+      seq_name: '数列侦探', seq_desc: '找出规律，说出数列中的下一个数。',
+      mini_hint: '2 个数字对<br>1 个位置对',
+      difficulty: '难度', mode_easy: '简单', mode_medium: '中等', mode_hard: '困难', mode_extreme: '极难',
+      rules_easy: '有一个 4 位数字密码（0–9）。数字可以重复，例如 7 7 0 2。输入猜测后按回车。你猜的每个数字都会显示颜色。',
+      rules_medium: '有一个 4 位数字密码（0–9）。数字可以重复。密码中有的数字会变黄，但黄色不表示位置是否正确。另有一个数量告诉你有几个位置正确，但不说是哪几个。卡住了？可以要提示（每局 3 次）。提示描述的是整个密码，比如它不包含哪个数字，或各位数字之和。',
+      rules_hard: '有一个 4 位数字密码（0–9）。数字可以重复。每次猜测会得到两个数量，但不会告诉你指的是哪些数字。',
+      rules_extreme: '凭记忆玩的困难模式。每次猜测得到同样的两个数量，但提交后数字很快就会消失。记住你输入了什么：棋盘上只留下数量。游戏结束时会重新显示所有猜测。',
+      legend_easy: '<span><i class="lg"></i>数字对，位置也对</span><span><i class="ly"></i>密码中有，但位置不对</span><span><i></i>密码中没有（或已无更多）</span>',
+      legend_medium: '<span><i class="ly"></i>密码中有（位置对不对都算）</span><span><i></i>密码中没有（或已无更多）</span><span><i class="lg"></i><strong>位置对</strong>：有几个数字恰好在正确位置</span>',
+      legend_hard: '<span><i class="ly"></i><strong>数字对</strong>：你的数字中有几个在密码里（包括位置正确的）</span><span><i class="lg"></i><strong>位置对</strong>：其中有几个恰好在正确位置</span>',
+      legend_extreme: '<span><i class="ly"></i><strong>数字对</strong>：你的数字中有几个在密码里</span><span><i class="lg"></i><strong>位置对</strong>：有几个恰好在正确位置</span><span><i class="lm"></i>已隐藏的猜测</span>',
+      tries_n: n => `你有 ${n} 次机会。`,
+      stats_mode: l => `${l}统计`,
+      clues: '提示', guesses: '猜测', new_code: '新密码', other_games: '其他游戏',
+      your_stats: '你的统计', played: '局数', won: '胜率', streak: '连胜', best: '最佳',
+      status_new_mode: (l, n) => `新的${l}密码，共 ${n} 次机会。`,
+      digit: d => `数字 ${d}`, key_delete: '⌫ 删除', key_enter: '确定',
+      tile_g: '位置正确', tile_y_easy: '在密码中，位置不对', tile_y: '在密码中', tile_b: '不匹配',
+      in_code: '数字对', in_place: '位置对',
+      hint_aria_pl: n => `${n} 个位置对`, hint_aria_both: (a, b) => `${a} 个数字对，${b} 个位置对`,
+      hidden_digit: '隐藏的数字',
+      enter_all: '请先输入 4 个数字。',
+      left_n: n => `还剩 ${n} 次机会`,
+      welcome: '欢迎回来 · ',
+      cracked_first: '一次就破解了！', cracked_n: n => `用 ${n} 次猜测破解了密码。`,
+      out_status: c => `机会用完了。密码是 <span class="code">${c}</span>`,
+      praise: ['难以置信。', '推理精彩。', '眼光敏锐。', '推理得当。', '逻辑扎实。', '成功了。', '坚持就有回报。'],
+      win_title: '恭喜！', lose_title: '机会用完了', play_again: '再玩一次', try_new: '换个新密码',
+      win_first: '一次就猜中！这几乎从没发生过。',
+      win_msg: (p, n, t) => `${p}你用了 ${n}/${t} 次猜测破解了密码。`,
+      eyebrow_win: l => `密码已破解 · ${l}`, eyebrow_lose: l => `密码未破解 · ${l}`,
+      used_clues: h => (h ? `你用了 ${h} 次提示。` : '没有用提示。'),
+      lose_msg: (b, len) => `这就是密码。你最接近的一次猜测有 ${b}/${len} 个数字位置正确。连胜清零，但新密码随时可以开始。`,
+      close: '关闭',
+      clue_absent: d => `密码中没有 ${d}。`,
+      clue_untried: n => (n === 0 ? '密码中的每个数字你都已经试过了。' : `你还没试过的数字中，有 ${n} 个不同的数字在密码里。`),
+      clue_sum: s => `四个数字之和是 ${s}。`,
+      clue_even: n => `密码中有 ${n} 个偶数（0 算偶数）。`,
+      clue_repeats: n => (n === 4 ? '没有数字重复出现。' : n === 1 ? '密码是同一个数字重复四次。' : `密码只用了 ${n} 个不同的数字，所以有数字重复。`),
+      clue_ends: c => ({ same: '第一位和最后一位相同。', gt: '第一位比最后一位大。', lt: '第一位比最后一位小。' })[c],
+      clue_spotParity: (p, odd) => `第${['一', '二', '三', '四'][p]}位是${odd ? '奇数' : '偶数'}。`,
+      clue_big: n => `有 ${n} 个数字大于或等于 5。`,
+      ask_clue: n => `要一个提示（还剩 ${n} 次）`, no_clues: '提示已用完',
+      no_new_clue: '现在没有新的提示可给。', clue_added: '已添加新提示。',
+      range_aria: '数字范围', range9: '数字 1–9', range13: '数字 1–13',
+      howto_summary: '四个数字各用一次，配合 + − × ÷ 和括号，算出 24。<span>玩法说明</span>',
+      howto_p: '点按卡片和按钮来写出答案。点按答案栏的任意位置可移动光标，新内容会插入在光标处。四个数字都用上且括号全部闭合后，答案会立即检查。× 和 ÷ 先于 + 和 − 计算，所以要用括号改变顺序。',
+      howto_keys: '键盘：<kbd>1</kbd>–<kbd>4</kbd> 添加卡片，<kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> 添加符号，<kbd>←</kbd> <kbd>→</kbd> 移动光标，<kbd>Backspace</kbd> 删除。',
+      puzzle: '题目', stopwatch: '秒表', cards_aria: '数字卡片', ops_aria: '运算',
+      op_add: '加', op_sub: '减', op_mul: '乘', op_div: '除', op_open: '左括号', op_close: '右括号',
+      answer: '你的答案', answer_is: s => `你的答案：${s}`, empty: '空',
+      btn_delete: '删除', btn_clear: '清空', btn_show: '看一个解法', btn_new: '新题目',
+      m24_stats: '算 24 统计', solved: '已解', top_streak: '最高连胜', fastest: '最快',
+      e_two_ops: '两个运算符之间需要一个数字。',
+      e_after_paren: '“(” 后面要紧跟一个数字。',
+      e_start: '请以数字或 “(” 开头。',
+      e_empty_paren: '有一对括号是空的或未完成。',
+      e_need_op_num: '两个数字之间要放一个运算符。',
+      e_need_op_paren: '“(” 前面要放一个运算符。',
+      e_stray_close: '有一个 “)” 前面没有对应的 “(”。',
+      e_end: '答案必须以数字或 “)” 结尾。',
+      e_close: n => `还要闭合 ${n} 个括号。`,
+      card: (i, n, used) => `卡片 ${i}：${n}` + (used ? '，已用' : ''),
+      placeholder: '点按上方的数字开始',
+      open_n: n => `${n} 个未闭合 (`,
+      once: '每张卡片只能用一次。',
+      div_zero: '某一步除以了零。改一步再试试。',
+      makes: v => `结果是 ${v}，不是 24。`,
+      one_way: '一种算出 24 的方法',
+      sol_no_count: '现在解出不会计入你的统计。',
+      cheers: ['二十四！', '漂亮！', '正中目标！', '正好 24！'],
+      shown_msg: '看着答案解出，这题不计分。下一题自己试试吧。',
+      solved_in: c => `用时 ${c}。`, fastest_yet: '这是你的最快纪录。', in_row: n => `已连续解出 ${n} 题。`,
+      solved_status: e => `已解出：${e} = 24`, made24: s => `算出 24 · ${s}`,
+      new_range: r => `新题目，数字范围 1 到 ${r}。`, next_puzzle: '下一题'
+    }
+  };
+  const LANGS = Object.keys(STR);
+  let lang = store.get('digitden.lang', null);
+  if (!STR[lang]) {
+    const nav = (navigator.languages || [navigator.language || 'en']).map(l => String(l).slice(0, 2).toLowerCase());
+    lang = nav.find(l => STR[l]) || 'en';
+  }
+  function tr(key, ...args) {
+    const v = key in STR[lang] ? STR[lang][key] : STR.en[key];
+    return typeof v === 'function' ? v(...args) : v;
+  }
+  // Static text in the markup is tagged with data-i18n (text), data-i18n-html (markup) or data-i18n-aria (label).
+  function applyStatic() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = tr(el.dataset.i18nHtml); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', tr(el.dataset.i18nAria)); });
+    const sel = document.getElementById('langSel');
+    if (sel) sel.value = lang;
+  }
+  applyStatic();
+
+  /* ---------- routing ---------- */
+  const views = {
+    hub: document.getElementById('hub'),
+    'crack-the-code': document.getElementById('crack-the-code'),
+    'make-24': document.getElementById('make-24')
+  };
+  const TAGLINES = { hub: 'tag_hub', 'crack-the-code': 'tag_crack', 'make-24': 'tag_24' };
+  const backBtn = document.getElementById('backBtn');
+  const tagline = document.getElementById('tagline');
+  function route() {
+    const name = location.hash.slice(1);
+    const key = views[name] ? name : 'hub';
+    Object.entries(views).forEach(([k, el]) => el.hidden = k !== key);
+    backBtn.hidden = key === 'hub';
+    tagline.textContent = tr(TAGLINES[key]);
+  }
+  window.addEventListener('hashchange', route);
+  backBtn.onclick = () => { location.hash = 'hub'; };
+  document.getElementById('toHub').onclick = () => { location.hash = 'hub'; };
+  document.getElementById('open-crack').onclick = () => { location.hash = 'crack-the-code'; };
+  document.getElementById('open-24').onclick = () => { location.hash = 'make-24'; };
+
+  /* ======================================================
+     Crack the Code
+     ====================================================== */
+  const LEN = 4;
+  const MODES = { easy: { tries: 8 }, medium: { tries: 9 }, hard: { tries: 10 }, extreme: { tries: 10 } };
+  const modeLabel = () => tr('mode_' + mode);
+  let mode = store.get('digitden.crack.mode', 'easy');
+  if (!MODES[mode]) mode = 'easy';
+  let TRIES = MODES[mode].tries;
+
+  function applyMode() {
+    const m = MODES[mode];
+    TRIES = m.tries;
+    document.getElementById('rules').textContent = tr('rules_' + mode) + tr('tries_n', m.tries);
+    document.getElementById('legend').innerHTML = tr('legend_' + mode);
+    document.getElementById('statsLabel').textContent = tr('stats_mode', modeLabel());
+    boardEl.className = 'board ' + mode;
+    document.getElementById('hintBar').hidden = mode !== 'medium';
+    document.querySelectorAll('#diff button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === mode)));
+  }
+  document.querySelectorAll('#diff button').forEach(b => {
+    b.onclick = () => {
+      if (b.dataset.mode === mode) return;
+      mode = b.dataset.mode;
+      store.set('digitden.crack.mode', mode);
+      start(null);
+      setStatus(() => tr('status_new_mode', modeLabel(), TRIES));
+    };
+  });
+
+  // Wordle-style scoring that handles repeated digits:
+  // pass 1 marks exact matches green; pass 2 marks yellow only while
+  // unmatched copies of that digit remain in the secret.
+  function score(guess, secret) {
+    const res = Array(LEN).fill('b');
+    const left = {};
+    for (let i = 0; i < LEN; i++) {
+      if (guess[i] === secret[i]) res[i] = 'g';
+      else left[secret[i]] = (left[secret[i]] || 0) + 1;
+    }
+    for (let i = 0; i < LEN; i++) {
+      if (res[i] === 'g') continue;
+      const d = guess[i];
+      if (left[d] > 0) { res[i] = 'y'; left[d]--; }
+    }
+    return res;
+  }
+  window.__score = score; // exposed for quick checks
+
+  const boardEl = document.getElementById('board');
+  const padEl = document.getElementById('pad');
+  const statusEl = document.getElementById('status');
+  const afterEl = document.getElementById('after');
+
+  let secret, guesses, current, over;
+  const keyState = {}; // digit -> 'g' | 'y' | 'b'
+  const rank = { b: 1, y: 2, g: 3 };
+
+  function newSecret() {
+    return Array.from({ length: LEN }, () => String(Math.floor(Math.random() * 10)));
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < TRIES; r++) {
+      const row = document.createElement('div');
+      row.className = 'row'; row.setAttribute('role', 'row');
+      const n = document.createElement('span'); n.className = 'row-num'; n.textContent = r + 1; row.appendChild(n);
+      for (let c = 0; c < LEN; c++) {
+        const t = document.createElement('div'); t.className = 'tile'; t.setAttribute('role', 'gridcell');
+        row.appendChild(t);
+      }
+      const h = document.createElement('div'); h.className = 'hint'; h.setAttribute('role', 'gridcell');
+      row.appendChild(h);
+      boardEl.appendChild(row);
+    }
+  }
+
+  function buildPad() {
+    padEl.innerHTML = '';
+    const order = ['1','2','3','4','5','6','7','8','9','0'];
+    order.forEach(d => {
+      const k = document.createElement('button');
+      k.type = 'button'; k.className = 'key'; k.textContent = d; k.dataset.d = d; k.setAttribute('aria-label', tr('digit', d));
+      k.onclick = () => press(d);
+      padEl.appendChild(k);
+    });
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'key wide'; del.textContent = tr('key_delete'); del.onclick = () => press('Backspace');
+    const ent = document.createElement('button');
+    ent.type = 'button'; ent.className = 'key wide enter'; ent.id = 'enterKey'; ent.textContent = tr('key_enter'); ent.onclick = () => press('Enter');
+    padEl.append(del, ent);
+  }
+
+  function rowEl(i) { return boardEl.children[i]; }
+  function tilesOf(i) { return rowEl(i).querySelectorAll('.tile'); }
+
+  function renderCurrent() {
+    if (over) return;
+    const tiles = tilesOf(guesses.length);
+    tiles.forEach((t, i) => {
+      const d = current[i] || '';
+      if (t.textContent !== d) {
+        t.textContent = d;
+        t.classList.toggle('filled', !!d);
+      }
+    });
+    document.getElementById('enterKey').disabled = current.length !== LEN;
+  }
+
+  function paintRow(i, guess, res, animate) {
+    // easy: full per-digit colors. medium: per-digit "in code" only, plus an in-place count.
+    // hard: neutral tiles, only the two totals.
+    const tiles = tilesOf(i);
+    const label = { g: tr('tile_g'), y: tr('tile_y'), b: tr('tile_b') };
+    tiles.forEach((t, c) => {
+      t.textContent = guess[c];
+      let cls = 'done', aria = guess[c];
+      if (mode === 'easy') { cls = res[c]; aria += ', ' + (res[c] === 'y' ? tr('tile_y_easy') : label[res[c]]); }
+      else if (mode === 'medium') { cls = res[c] === 'b' ? 'b' : 'y'; aria += ', ' + (res[c] === 'b' ? label.b : label.y); }
+      t.className = 'tile ' + cls + (animate && (mode === 'easy' || mode === 'medium') ? ' reveal' : '');
+      t.style.animationDelay = animate ? (c * 90) + 'ms' : '';
+      t.setAttribute('aria-label', aria);
+    });
+    if (mode === 'easy' || mode === 'medium') {
+      guess.forEach((d, c) => {
+        let s = res[c];
+        if (mode === 'medium' && s === 'g') s = 'y';
+        if (!keyState[d] || rank[s] > rank[keyState[d]]) keyState[d] = s;
+      });
+    }
+    const place = res.filter(x => x === 'g').length;
+    const inCode = place + res.filter(x => x === 'y').length;
+    const h = rowEl(i).querySelector('.hint');
+    h.className = 'hint' + (animate ? ' reveal' : '');
+    const inSpan = `<span class="in${inCode ? '' : ' zero'}"><b>${inCode}</b>${tr('in_code')}</span>`;
+    const plSpan = `<span class="pl${place ? '' : ' zero'}"><b>${place}</b>${tr('in_place')}</span>`;
+    if (mode === 'easy') { h.innerHTML = ''; h.removeAttribute('aria-label'); }
+    else if (mode === 'medium') { h.innerHTML = plSpan; h.setAttribute('aria-label', tr('hint_aria_pl', place)); }
+    else { h.innerHTML = inSpan + plSpan; h.setAttribute('aria-label', tr('hint_aria_both', inCode, place)); }
+
+    // Extreme: the digits disappear shortly after the counts appear; restored rows load hidden.
+    if (mode === 'extreme') {
+      const hide = () => tiles.forEach(t => {
+        t.textContent = ''; t.classList.add('masked'); t.setAttribute('aria-label', tr('hidden_digit'));
+      });
+      if (animate) setTimeout(() => { if (!over) hide(); }, 1100);
+      else hide();
+    }
+  }
+
+  function unmaskAll() {
+    guesses.forEach((g, i) => tilesOf(i).forEach((t, c) => {
+      t.textContent = g[c]; t.classList.remove('masked'); t.setAttribute('aria-label', g[c]);
+    }));
+  }
+
+  function paintKeys() {
+    padEl.querySelectorAll('.key[data-d]').forEach(k => {
+      k.classList.remove('g', 'y', 'b');
+      const s = keyState[k.dataset.d];
+      if (s) k.classList.add(s);
+    });
+  }
+
+  let statusFn = null, statusCls = '';
+  function setStatus(fn, cls) { statusFn = fn || null; statusCls = cls || ''; drawStatus(); }
+  function drawStatus() { statusEl.innerHTML = statusFn ? statusFn() : ''; statusEl.className = 'status' + (statusCls ? ' ' + statusCls : ''); }
+
+  function submit() {
+    if (current.length !== LEN) {
+      const r = rowEl(guesses.length); r.classList.remove('shake'); void r.offsetWidth; r.classList.add('shake');
+      setStatus(() => tr('enter_all'));
+      return;
+    }
+    const guess = current.slice();
+    const res = score(guess, secret);
+    paintRow(guesses.length, guess, res, true);
+    guesses.push(guess);
+    current = [];
+    paintKeys();
+
+    const won = res.every(x => x === 'g');
+    if (won) {
+      finish(true);
+    } else if (guesses.length >= TRIES) {
+      finish(false);
+    } else {
+      const left = TRIES - guesses.length;
+      setStatus(() => tr('left_n', left));
+      renderCurrent();
+    }
+    save();
+  }
+
+  function finish(won) {
+    over = true;
+    document.getElementById('enterKey').disabled = true;
+    const n = guesses.length;
+    if (won) {
+      setStatus(() => (n === 1 ? tr('cracked_first') : tr('cracked_n', n)), 'win');
+    } else {
+      const code = secret.join('');
+      setStatus(() => tr('out_status', code), 'lose');
+    }
+    afterEl.hidden = false;
+    hintBtn.disabled = true;
+    if (mode === 'extreme') unmaskAll();
+    recordStats(won, n);
+    setTimeout(() => (won ? showWin(n) : showLoss()), 650);
+  }
+
+  /* ---------- congratulations popup ---------- */
+  const winOverlay = document.getElementById('winOverlay');
+  function showLoss() {
+    const best = Math.max(0, ...guesses.map(g => score(g, secret).filter(x => x === 'g').length));
+    showWin(guesses.length, false, best);
+  }
+  function showWin(n, won = true, best = 0) {
+    document.getElementById('winCard').classList.toggle('lost', !won);
+    document.getElementById('winTitle').textContent = won ? tr('win_title') : tr('lose_title');
+    document.getElementById('winAgain').textContent = won ? tr('play_again') : tr('try_new');
+    document.getElementById('winCode').innerHTML = secret.map(d => `<span>${d}</span>`).join('');
+    const PRAISE = tr('praise');
+    const praise = PRAISE[Math.min(Math.floor((n - 1) / 1.5), PRAISE.length - 1)];
+    document.getElementById('winMsg').textContent =
+      n === 1 ? tr('win_first') : tr('win_msg', praise, n, TRIES);
+    document.getElementById('winEyebrow').textContent = tr('eyebrow_win', modeLabel());
+    if (mode === 'medium') {
+      const h = clues.length;
+      document.getElementById('winMsg').textContent += tr('used_clues', h);
+    }
+    if (!won) {
+      document.getElementById('winEyebrow').textContent = tr('eyebrow_lose', modeLabel());
+      document.getElementById('winMsg').textContent =
+        tr('lose_msg', best, LEN);
+    }
+    const s = store.get(sk(), { played: 0, wins: 0, streak: 0, best: null });
+    document.getElementById('w-played').textContent = s.played;
+    document.getElementById('w-win').textContent = s.played ? Math.round(100 * s.wins / s.played) + '%' : '0%';
+    document.getElementById('w-streak').textContent = s.streak;
+    document.getElementById('w-best').textContent = s.best == null ? '–' : s.best;
+    winOverlay.hidden = false;
+    document.getElementById('winAgain').focus();
+    if (won) confetti();
+  }
+  function hideWin() { winOverlay.hidden = true; stopConfetti(); }
+  document.getElementById('winClose').onclick = hideWin;
+  document.getElementById('winAgain').onclick = () => { hideWin(); start(null); };
+  document.getElementById('winHub').onclick = () => { hideWin(); location.hash = 'hub'; };
+  winOverlay.addEventListener('click', e => { if (e.target === winOverlay) hideWin(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !winOverlay.hidden) hideWin(); });
+
+  let confettiRaf = null;
+  function stopConfetti() {
+    if (confettiRaf) cancelAnimationFrame(confettiRaf);
+    confettiRaf = null;
+    const c = document.getElementById('confetti');
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  }
+  function confetti() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const c = document.getElementById('confetti'), ctx = c.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+    const cs = getComputedStyle(document.documentElement);
+    const colors = ['--hit', '--near', '--accent'].map(v => cs.getPropertyValue(v).trim());
+    const digits = '0123456789';
+    const bits = Array.from({ length: 120 }, (_, i) => ({
+      x: innerWidth / 2 + (Math.random() - .5) * 80, y: innerHeight * 0.35,
+      vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 4,
+      r: Math.random() * Math.PI, vr: (Math.random() - .5) * .3,
+      size: 6 + Math.random() * 7, color: colors[i % colors.length],
+      digit: i % 4 === 0 ? digits[Math.floor(Math.random() * 10)] : null
+    }));
+    const t0 = performance.now();
+    stopConfetti();
+    function frame(t) {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const life = (t - t0) / 3200;
+      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, life - 0.6) / 0.4);
+      bits.forEach(b => {
+        b.vy += 0.32; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.color;
+        if (b.digit) { ctx.font = `700 ${b.size * 2}px "IBM Plex Mono", monospace`; ctx.fillText(b.digit, -b.size / 2, b.size / 2); }
+        else ctx.fillRect(-b.size / 2, -b.size / 4, b.size, b.size / 2);
+        ctx.restore();
+      });
+      if (life < 1) confettiRaf = requestAnimationFrame(frame);
+      else stopConfetti();
+    }
+    confettiRaf = requestAnimationFrame(frame);
+  }
+
+  function press(key) {
+    if (over) return;
+    if (/^[0-9]$/.test(key)) {
+      if (current.length < LEN) { current.push(key); setStatus(null); }
+    } else if (key === 'Backspace') {
+      current.pop();
+    } else if (key === 'Enter') {
+      submit(); return;
+    }
+    renderCurrent();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (views['crack-the-code'].hidden || !document.getElementById('winOverlay').hidden) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^[0-9]$/.test(e.key) || e.key === 'Backspace' || e.key === 'Enter') {
+      if (e.key === 'Enter' && document.activeElement && document.activeElement.tagName === 'BUTTON' && !document.activeElement.classList.contains('key')) return;
+      e.preventDefault();
+      press(e.key);
+      if (e.key === 'Enter' && document.activeElement) document.activeElement.blur();
+    }
+  });
+
+  /* ---------- stats ---------- */
+  const sk = () => 'digitden.crack.stats.' + mode;
+  function recordStats(won, n) {
+    const s = store.get(sk(), { played: 0, wins: 0, streak: 0, best: null });
+    s.played++;
+    if (won) { s.wins++; s.streak++; s.best = s.best == null ? n : Math.min(s.best, n); }
+    else s.streak = 0;
+    store.set(sk(), s);
+    showStats();
+  }
+  function showStats() {
+    const s = store.get(sk(), { played: 0, wins: 0, streak: 0, best: null });
+    document.getElementById('st-played').textContent = s.played;
+    document.getElementById('st-win').textContent = s.played ? Math.round(100 * s.wins / s.played) + '%' : '0%';
+    document.getElementById('st-streak').textContent = s.streak;
+    document.getElementById('st-best').textContent = s.best == null ? '–' : s.best;
+  }
+
+  /* ---------- game state persistence ---------- */
+  const GKEY = 'digitden.crack.game';
+  function save() { store.set(GKEY, { secret, guesses, over, mode, clues }); }
+
+  function start(saved) {
+    if (saved && MODES[saved.mode] && !saved.over) mode = saved.mode;
+    applyMode();
+    buildBoard(); buildPad();
+    Object.keys(keyState).forEach(k => delete keyState[k]);
+    afterEl.hidden = true;
+    current = [];
+    if (saved && Array.isArray(saved.secret) && saved.secret.length === LEN && !saved.over && (saved.guesses || []).length < TRIES) {
+      secret = saved.secret; guesses = []; over = false;
+      clues = Array.isArray(saved.clues) ? saved.clues.filter(c => c && (Array.isArray(c.args) || typeof c.text === 'string')) : [];
+      (saved.guesses || []).forEach((g, i) => { paintRow(i, g, score(g, secret), false); guesses.push(g); });
+      paintKeys();
+      const left = TRIES - guesses.length;
+      setStatus(guesses.length ? () => tr('welcome') + tr('left_n', left) : null);
+    } else {
+      secret = newSecret(); guesses = []; over = false; clues = [];
+      setStatus(null);
+      save();
+    }
+    renderHints();
+    renderCurrent();
+    showStats();
+  }
+
+  /* ---------- medium-mode hints ---------- */
+  // Clues describe the code as a whole and never name the digit in a given spot.
+  const MAX_HINTS = 3;
+  let clues = [];
+  const hintBtn = document.getElementById('hintBtn');
+
+  function makeClue(sec, tried) {
+    const digits = '0123456789'.split('');
+    const inCode = new Set(sec);
+    const untried = digits.filter(d => !tried.has(d));
+    // Each clue returns the facts it needs; the wording comes from the language table.
+    const gens = {
+      absent: () => {
+        const opts = untried.filter(d => !inCode.has(d));
+        return opts.length ? [opts[Math.floor(Math.random() * opts.length)]] : null;
+      },
+      untried: () => (!tried.size || !untried.length ? null : [untried.filter(d => inCode.has(d)).length]),
+      sum: () => [sec.reduce((a, d) => a + +d, 0)],
+      even: () => [sec.filter(d => +d % 2 === 0).length],
+      repeats: () => [inCode.size],
+      ends: () => {
+        const a = +sec[0], b = +sec[LEN - 1];
+        return [a === b ? 'same' : a > b ? 'gt' : 'lt'];
+      },
+      spotParity: () => {
+        const p = Math.floor(Math.random() * LEN);
+        return [p, +sec[p] % 2 === 1];
+      },
+      big: () => [sec.filter(d => +d >= 5).length]
+    };
+    return gens;
+  }
+
+  function nextClue() {
+    const tried = new Set(guesses.flat());
+    const gens = makeClue(secret, tried);
+    const used = new Set(clues.map(c => c.type));
+    const pool = [];
+    Object.keys(gens).forEach(t => {
+      if (used.has(t) && t !== 'absent') return;     // "does not contain" can repeat, others once
+      const w = t === 'absent' ? 3 : 1;               // favor the "does not contain" clue
+      for (let i = 0; i < w; i++) pool.push(t);
+    });
+    while (pool.length) {
+      const i = Math.floor(Math.random() * pool.length);
+      const ty = pool[i];
+      const args = gens[ty]();
+      const sig = JSON.stringify(args);
+      if (args && !clues.some(c => c.type === ty && JSON.stringify(c.args) === sig)) return { type: ty, args };
+      for (let j = pool.length - 1; j >= 0; j--) if (pool[j] === ty) pool.splice(j, 1);
+    }
+    return null;
+  }
+
+  const clueText = c => (Array.isArray(c.args) ? tr('clue_' + c.type, ...c.args) : c.text);
+  function renderHints(animateLast) {
+    const list = document.getElementById('clueList');
+    list.innerHTML = '';
+    clues.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.textContent = clueText(c);
+      if (animateLast && i === clues.length - 1) li.className = 'new';
+      list.appendChild(li);
+    });
+    const left = MAX_HINTS - clues.length;
+    hintBtn.textContent = left > 0 ? tr('ask_clue', left) : tr('no_clues');
+    hintBtn.disabled = over || left <= 0;
+  }
+  hintBtn.onclick = () => {
+    if (over || mode !== 'medium' || clues.length >= MAX_HINTS) return;
+    const c = nextClue();
+    if (!c) { setStatus(() => tr('no_new_clue')); return; }
+    clues.push(c);
+    save();
+    renderHints(true);
+    setStatus(() => tr('clue_added'));
+  };
+  window.__makeClue = makeClue; window.__clueText = clueText; // exposed for quick checks
+
+  document.getElementById('newGame').onclick = () => { start(null); };
+
+  start(store.get(GKEY, null));
+
+  /* ======================================================
+     Make 24
+     ====================================================== */
+  // Exact fractions, so 8 ÷ (3 − 8 ÷ 3) really equals 24.
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const R = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); return { n: n / g, d: d / g }; };
+  const OPS = {
+    '+': (a, b) => R(a.n * b.d + b.n * a.d, a.d * b.d),
+    '−': (a, b) => R(a.n * b.d - b.n * a.d, a.d * b.d),
+    '×': (a, b) => R(a.n * b.n, a.d * b.d),
+    '÷': (a, b) => (b.n === 0 ? null : R(a.n * b.d, a.d * b.n))
+  };
+  const is24 = v => v.n === 24 && v.d === 1;
+  const fmt = v => (v.d === 1 ? String(v.n) : `${v.n}/${v.d}`);
+  const wrap = t => (t.c ? `(${t.e})` : t.e);
+
+  // Depth-first search over every pair, order and operation. Returns one expression or null.
+  function solve24(items) {
+    if (items.length === 1) return is24(items[0].v) ? items[0].e : null;
+    for (let i = 0; i < items.length; i++) {
+      for (let j = 0; j < items.length; j++) {
+        if (i === j) continue;
+        const rest = items.filter((_, k) => k !== i && k !== j);
+        for (const op of Object.keys(OPS)) {
+          if ((op === '+' || op === '×') && j < i) continue; // commutative: try one order
+          const v = OPS[op](items[i].v, items[j].v);
+          if (!v) continue;
+          const r = solve24([...rest, { v, e: `${wrap(items[i])} ${op} ${wrap(items[j])}`, c: true }]);
+          if (r) return r;
+        }
+      }
+    }
+    return null;
+  }
+  window.__solve24 = nums => solve24(nums.map(n => ({ v: R(n), e: String(n), c: false })));
+
+  /* ---------- expressions ---------- */
+  // Tokens: {t:'num', i:cardIndex} | {t:'op', op} | {t:'('} | {t:')'}
+  const kind = t => (t ? (t.t === 'op' ? 'op' : t.t) : 'none');
+  const tokStr = (t, nums) => (t.t === 'num' ? String(nums[t.i]) : t.t === 'op' ? t.op : t.t);
+  function tokText(toks, nums) {
+    return toks.map(t => (t.t === 'op' ? ` ${t.op} ` : tokStr(t, nums))).join('');
+  }
+  // Returns null when the expression is well formed, otherwise {k: message key, n}.
+  function checkSyntax(toks) {
+    if (!toks.length) return { k: 'empty' };
+    let depth = 0, prev = 'none';
+    for (const t of toks) {
+      const k = kind(t);
+      const wantsValue = prev === 'none' || prev === 'op' || prev === '(';
+      if (wantsValue && k === 'op') {
+        return { k: prev === 'op' ? 'e_two_ops' : prev === '(' ? 'e_after_paren' : 'e_start' };
+      }
+      if (wantsValue && k === ')') return { k: 'e_empty_paren' };
+      if (!wantsValue && k === 'num') return { k: 'e_need_op_num' };
+      if (!wantsValue && k === '(') return { k: 'e_need_op_paren' };
+      if (k === '(') depth++;
+      if (k === ')' && --depth < 0) return { k: 'e_stray_close' };
+      prev = k;
+    }
+    if (prev === 'op' || prev === '(') return { k: 'e_end' };
+    if (depth > 0) return { k: 'e_close', n: depth };
+    return null;
+  }
+  // Standard precedence: parentheses, then × ÷, then + −, left to right. Returns a fraction, or null on ÷ 0.
+  function evalToks(toks, nums) {
+    let i = 0, bad = false;
+    const apply = (op, a, b) => { if (a === null || b === null) return null; const v = OPS[op](a, b); if (!v) bad = true; return v; };
+    function factor() {
+      const t = toks[i++];
+      if (!t) return null;
+      if (t.t === 'num') return R(nums[t.i]);
+      if (t.t === '(') { const v = expr(); i++; return v; }
+      return null;
+    }
+    function term() {
+      let v = factor();
+      while (toks[i] && toks[i].t === 'op' && (toks[i].op === '×' || toks[i].op === '÷')) { const op = toks[i++].op; v = apply(op, v, factor()); }
+      return v;
+    }
+    function expr() {
+      let v = term();
+      while (toks[i] && toks[i].t === 'op' && (toks[i].op === '+' || toks[i].op === '−')) { const op = toks[i++].op; v = apply(op, v, term()); }
+      return v;
+    }
+    const v = expr();
+    return bad ? null : v;
+  }
+  window.__m24 = { checkSyntax, evalToks, tokText };
+
+  /* ---------- state ---------- */
+  const m24 = {
+    range: 9, nums: [], tokens: [], caret: 0,
+    elapsed: 0, last: 0,
+    done: false, shown: false, solution: ''
+  };
+  const $ = id => document.getElementById(id);
+  const m24El = {
+    tiles: $('m24Tiles'), status: $('m24Status'), sol: $('m24Sol'), time: $('m24Time'), orig: $('m24Orig'),
+    overlay: $('m24Overlay'), line: $('m24Line'), text: $('m24LineText'), val: $('m24LineVal')
+  };
+  const M24KEY = 'digitden.m24.puzzle', M24STATS = 'digitden.m24.stats';
+
+  let m24StatusFn = null, m24StatusCls = '';
+  function m24Status(fn, cls) { m24StatusFn = fn || null; m24StatusCls = cls || ''; m24DrawStatus(); }
+  function m24DrawStatus() { m24El.status.textContent = m24StatusFn ? m24StatusFn() : ''; m24El.status.className = 'status' + (m24StatusCls ? ' ' + m24StatusCls : ''); }
+  const clock = ms => {
+    const t = Math.floor(ms / 100), s = Math.floor(t / 10);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.${t % 10}`;
+  };
+  function m24Shake() { m24El.line.classList.remove('shake'); void m24El.line.offsetWidth; m24El.line.classList.add('shake'); }
+
+  function m24Fresh(nums) {
+    m24.nums = nums;
+    m24.solution = window.__solve24(nums);
+    m24.tokens = []; m24.caret = 0;
+    m24.elapsed = 0; m24.last = performance.now();
+    m24.done = false; m24.shown = false;
+    m24El.sol.hidden = true;
+    m24El.orig.textContent = nums.join(' ');
+    store.set(M24KEY, { range: m24.range, nums });
+    m24Status(null);
+    m24Render();
+  }
+  function m24NewPuzzle() {
+    let nums, tries = 0;
+    do {
+      nums = Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * m24.range));
+      tries++;
+    } while (!window.__solve24(nums) && tries < 500);
+    m24Fresh(nums);
+  }
+
+  /* ---------- editing at the cursor ---------- */
+  function m24Blocked() { return m24.done; }
+  function m24Insert(tok) {
+    if (m24Blocked()) return;
+    if (tok.t === 'num' && m24.tokens.some(t => t.t === 'num' && t.i === tok.i)) {
+      m24Shake(); m24Status(() => tr('once')); return;
+    }
+    m24.tokens.splice(m24.caret, 0, tok);
+    m24.caret++;
+    m24After();
+  }
+  function m24Backspace() {
+    if (m24Blocked() || m24.caret === 0) return;
+    m24.tokens.splice(m24.caret - 1, 1); m24.caret--;
+    m24After();
+  }
+  function m24DeleteFwd() {
+    if (m24Blocked() || m24.caret >= m24.tokens.length) return;
+    m24.tokens.splice(m24.caret, 1);
+    m24After();
+  }
+  function m24Clear() {
+    if (m24Blocked() || !m24.tokens.length) return;
+    m24.tokens = []; m24.caret = 0;
+    m24After();
+  }
+  function m24MoveCaret(to) {
+    if (m24.done) return;
+    m24.caret = Math.max(0, Math.min(m24.tokens.length, to));
+    m24Render();
+  }
+
+  // After every edit: win if it is a complete, correct answer; explain if all four cards are in but it is not.
+  function m24After() {
+    const toks = m24.tokens;
+    const used = toks.filter(t => t.t === 'num').length;
+    const err = checkSyntax(toks);
+    m24Status(null);
+    if (!err && used === 4) {
+      const v = evalToks(toks, m24.nums);
+      if (v === null) { m24Shake(); m24Status(() => tr('div_zero')); }
+      else if (is24(v)) { m24Win(tokText(toks, m24.nums)); return; }
+      else { const val = fmt(v); m24Shake(); m24Status(() => tr('makes', val)); }
+    } else if (used === 4 && err.k !== 'empty') {
+      m24Status(() => tr(err.k, err.n));
+    }
+    m24Render();
+  }
+
+  /* ---------- rendering ---------- */
+  function m24Render() {
+    m24El.line.classList.toggle('win', m24.done);
+
+    const used = new Set(m24.tokens.filter(t => t.t === 'num').map(t => t.i));
+    m24El.tiles.innerHTML = '';
+    m24.nums.forEach((n, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'm24-tile' + (used.has(i) ? ' used' : '');
+      b.innerHTML = `<b>${n}</b>`;
+      b.disabled = used.has(i) || m24.done;
+      b.setAttribute('aria-label', tr('card', i + 1, n, used.has(i)));
+      b.onclick = () => m24Insert({ t: 'num', i });
+      m24El.tiles.appendChild(b);
+    });
+
+    // Answer bar: one span per piece, with the cursor drawn between pieces.
+    const txt = m24El.text;
+    txt.innerHTML = '';
+    const caret = () => { const c = document.createElement('span'); c.className = 'caret'; c.setAttribute('aria-hidden', 'true'); return c; };
+    const showCaret = !m24.done;
+    m24.tokens.forEach((t, i) => {
+      if (showCaret && i === m24.caret) txt.appendChild(caret());
+      const s = document.createElement('span');
+      s.className = 'tok' + (t.t === 'op' ? ' t-op' : '');
+      s.dataset.i = i;
+      s.textContent = tokStr(t, m24.nums);
+      txt.appendChild(s);
+    });
+    if (showCaret && m24.caret === m24.tokens.length) txt.appendChild(caret());
+    if (!m24.tokens.length) {
+      const p = document.createElement('span'); p.className = 'placeholder'; p.textContent = tr('placeholder');
+      txt.appendChild(p);
+    }
+    m24El.line.setAttribute('aria-label', tr('answer_is', tokText(m24.tokens, m24.nums) || tr('empty')));
+
+    const err = checkSyntax(m24.tokens);
+    const v = err ? null : evalToks(m24.tokens, m24.nums);
+    const open = m24.tokens.reduce((n, t) => n + (t.t === '(' ? 1 : t.t === ')' ? -1 : 0), 0);
+    m24El.val.textContent = !err ? (v ? `= ${fmt(v)}` : '÷ 0') : open > 0 ? tr('open_n', open) : '';
+    m24El.val.className = 'm24-line-val' + (v && is24(v) ? ' hit' : '');
+
+    $('m24Undo').disabled = m24.done || m24.caret === 0;
+    $('m24Reset').disabled = m24.done || !m24.tokens.length;
+    $('m24Show').disabled = m24.shown || m24.done;
+    document.querySelectorAll('#m24Range button').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.range === m24.range)));
+    m24RenderWatch();
+  }
+
+  // Tap anywhere in the answer bar: put the cursor at the nearest gap between pieces.
+  m24El.line.addEventListener('click', e => {
+    if (m24.done) return;
+    const toks = [...m24El.text.querySelectorAll('.tok')];
+    if (!toks.length) { m24MoveCaret(0); return; }
+    let best = null, bestD = Infinity;
+    toks.forEach(el => {
+      const r = el.getBoundingClientRect();
+      const dy = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0;
+      const cx = r.left + r.width / 2;
+      const d = dy * 1000 + Math.abs(e.clientX - cx);
+      if (d < bestD) { bestD = d; best = { i: +el.dataset.i, cx }; }
+    });
+    m24MoveCaret(e.clientX < best.cx ? best.i : best.i + 1);
+  });
+
+  /* ---------- stopwatch ---------- */
+  function m24RenderWatch() {
+    $('m24Dot').classList.toggle('off', m24.done);
+  }
+  // The clock only runs while the puzzle is on screen, unpaused and unsolved.
+  function m24Tick() {
+    const now = performance.now();
+    if (!m24.done && !views['make-24'].hidden && document.visibilityState === 'visible') m24.elapsed += now - m24.last;
+    m24.last = now;
+    m24El.time.textContent = clock(m24.elapsed);
+  }
+  setInterval(m24Tick, 100);
+
+  /* ---------- stats, solution, win ---------- */
+  const m24Stats = () => store.get(M24STATS, { solved: 0, streak: 0, top: 0, best: null });
+  function m24ShowStats() {
+    const s = m24Stats();
+    ['m24-', 'm24w-'].forEach(p => {
+      $(p + 'solved').textContent = s.solved;
+      $(p + 'streak').textContent = s.streak;
+      $(p + 'top').textContent = s.top;
+      $(p + 'best').textContent = s.best == null ? '–' : clock(s.best);
+    });
+  }
+  function m24BreakStreak() {
+    const s = m24Stats();
+    if (s.streak) { s.streak = 0; store.set(M24STATS, s); m24ShowStats(); }
+  }
+  function m24ShowSolution() {
+    if (m24.done || m24.shown) return;
+    m24.shown = true;
+    m24BreakStreak();
+    m24DrawSol();
+    m24El.sol.hidden = false;
+    m24Status(() => tr('sol_no_count'));
+    m24Render();
+  }
+
+  function m24DrawSol() {
+    m24El.sol.innerHTML = '';
+    const sm = document.createElement('small'); sm.textContent = tr('one_way');
+    m24El.sol.append(sm, `${m24.solution} = 24`);
+  }
+  function m24Win(expr) {
+    m24Tick();
+    m24.done = true;
+    const t = m24.elapsed;
+    let msg;
+    if (m24.shown) {
+      msg = tr('shown_msg');
+    } else {
+      const s = m24Stats();
+      const record = s.best == null || t < s.best;
+      s.solved++; s.streak++; s.top = Math.max(s.top, s.streak);
+      if (record) s.best = t;
+      store.set(M24STATS, s);
+      msg = tr('solved_in', clock(t)) + (record && s.solved > 1 ? tr('fastest_yet') : '') +
+        (s.streak > 1 ? tr('in_row', s.streak) : '');
+    }
+    m24ShowStats();
+    m24Render();
+    m24Status(() => tr('solved_status', expr), 'win');
+    $('m24WinEyebrow').textContent = tr('made24', m24.nums.join(' '));
+    const CHEERS = tr('cheers');
+    $('m24WinTitle').textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+    $('m24WinExpr').textContent = `${expr} = 24`;
+    $('m24WinMsg').textContent = msg;
+    setTimeout(() => {
+      m24El.overlay.hidden = false;
+      $('m24WinNext').focus();
+      if (!m24.shown) confetti();
+    }, 450);
+  }
+  function m24HideWin() { m24El.overlay.hidden = true; stopConfetti(); }
+  $('m24WinClose').onclick = m24HideWin;
+  $('m24WinNext').onclick = () => { m24HideWin(); m24NewPuzzle(); };
+  $('m24WinHub').onclick = () => { m24HideWin(); location.hash = 'hub'; };
+  m24El.overlay.addEventListener('click', e => { if (e.target === m24El.overlay) m24HideWin(); });
+
+  /* ---------- controls ---------- */
+  document.querySelectorAll('#m24Ops .op').forEach(o => {
+    o.onclick = () => {
+      const op = o.dataset.op;
+      m24Insert(op === '(' || op === ')' ? { t: op } : { t: 'op', op });
+    };
+  });
+  $('m24Undo').onclick = m24Backspace;
+  $('m24Reset').onclick = m24Clear;
+  $('m24Show').onclick = m24ShowSolution;
+  $('m24New').onclick = () => {
+    if (!m24.done && !m24.shown && m24.tokens.length) m24BreakStreak(); // skipping a started puzzle ends the streak
+    m24NewPuzzle();
+  };
+  document.querySelectorAll('#m24Range button').forEach(b => {
+    b.onclick = () => {
+      const r = +b.dataset.range;
+      if (r === m24.range) return;
+      m24.range = r;
+      m24NewPuzzle();
+      m24Status(() => tr('new_range', r));
+    };
+  });
+
+  const KEY_OPS = { '+': '+', '-': '−', '*': '×', 'x': '×', 'X': '×', '/': '÷' };
+  document.addEventListener('keydown', e => {
+    if (views['make-24'].hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!m24El.overlay.hidden) { if (e.key === 'Escape') m24HideWin(); return; }
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'SUMMARY' && (e.key === 'Enter' || e.key === ' ')) return;
+    let handled = true;
+    if (/^[1-4]$/.test(e.key)) m24Insert({ t: 'num', i: +e.key - 1 });
+    else if (KEY_OPS[e.key]) m24Insert({ t: 'op', op: KEY_OPS[e.key] });
+    else if (e.key === '(' || e.key === ')') m24Insert({ t: e.key });
+    else if (e.key === 'Backspace') m24Backspace();
+    else if (e.key === 'Delete') m24DeleteFwd();
+    else if (e.key === 'ArrowLeft') m24MoveCaret(m24.caret - 1);
+    else if (e.key === 'ArrowRight') m24MoveCaret(m24.caret + 1);
+    else if (e.key === 'Home') m24MoveCaret(0);
+    else if (e.key === 'End') m24MoveCaret(m24.tokens.length);
+    else handled = false;
+    if (handled) e.preventDefault();
+  });
+
+  (function initM24() {
+    const saved = store.get(M24KEY, null);
+    if (saved && (saved.range === 9 || saved.range === 13)) m24.range = saved.range;
+    if (saved && Array.isArray(saved.nums) && saved.nums.length === 4 && window.__solve24(saved.nums)) m24Fresh(saved.nums);
+    else m24NewPuzzle();
+    m24ShowStats();
+  })();
+
+  /* ---------- language picker ---------- */
+  // Redraw every piece of text in place; games in progress keep going.
+  function setLang(l) {
+    if (!STR[l]) return;
+    lang = l;
+    store.set('digitden.lang', l);
+    applyStatic();
+    route();
+    applyMode();
+    buildPad();
+    guesses.forEach((g, i) => paintRow(i, g, score(g, secret), false));
+    if (over && mode === 'extreme') unmaskAll();
+    paintKeys();
+    renderCurrent();
+    if (over) document.getElementById('enterKey').disabled = true;
+    renderHints();
+    drawStatus();
+    m24Render();
+    if (m24.shown) m24DrawSol();
+    m24DrawStatus();
+  }
+  document.getElementById('langSel').addEventListener('change', e => setLang(e.target.value));
+  window.__setLang = setLang;
+
+  route();
+})();
+</script>
+</body>
+</html>
