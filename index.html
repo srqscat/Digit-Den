@@ -379,6 +379,8 @@ kbd {
     /* Stretch the background and a hairline across the full screen width. */
     box-shadow: 0 0 0 100vmax var(--paper), 0 -1px 0 100vmax var(--rule); clip-path: inset(-1px -100vmax -100vmax);
   }
+  /* Whatever comes after the keypad must sit above its stretched background, or it turns into an invisible gap. */
+  #pad ~ * { position: relative; z-index: 6; }
 }
 </style>
 </head>
@@ -1178,6 +1180,7 @@ kbd {
       setStatus(() => tr('out_status', code), 'lose');
     }
     afterEl.hidden = false;
+    padEl.hidden = true; // game over: keypad is useless, show New code / Other games in its place
     hintBtn.disabled = true;
     if (mode === 'extreme') unmaskAll();
     recordStats(won, n);
@@ -1218,7 +1221,11 @@ kbd {
     document.getElementById('winAgain').focus();
     if (won) confetti();
   }
-  function hideWin() { winOverlay.hidden = true; stopConfetti(); }
+  function hideWin() {
+    winOverlay.hidden = true; stopConfetti();
+    // Land on the next-step buttons after closing the popup.
+    if (over && !afterEl.hidden) { afterEl.scrollIntoView({ block: 'center' }); document.getElementById('newGame').focus({ preventScroll: true }); }
+  }
   document.getElementById('winClose').onclick = hideWin;
   document.getElementById('winAgain').onclick = () => { hideWin(); start(null); };
   document.getElementById('winHub').onclick = () => { hideWin(); location.hash = 'hub'; };
@@ -1317,6 +1324,7 @@ kbd {
     buildBoard(); buildPad();
     Object.keys(keyState).forEach(k => delete keyState[k]);
     afterEl.hidden = true;
+    padEl.hidden = false;
     current = [];
     if (saved && Array.isArray(saved.secret) && saved.secret.length === LEN && !saved.over && (saved.guesses || []).length < TRIES) {
       secret = saved.secret; guesses = []; over = false;
