@@ -381,6 +381,10 @@ kbd {
   }
   /* Whatever comes after the keypad must sit above its stretched background, or it turns into an invisible gap. */
   #pad ~ * { position: relative; z-index: 6; }
+  /* While a game is going, the keypad is the last thing on the page: stats wait until the game ends,
+     and the page has no extra space under the keypad to scroll into. */
+  #pad:not([hidden]) ~ .stats, #pad:not([hidden]) ~ .stats-label { display: none; }
+  .wrap:has(#crack-the-code:not([hidden]) #pad:not([hidden])) { padding-bottom: 0; }
 }
 </style>
 </head>
