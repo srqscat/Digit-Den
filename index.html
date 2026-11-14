@@ -235,10 +235,14 @@ button, .board, .m24-line { touch-action: manipulation; -webkit-tap-highlight-co
 .key.enter:disabled { opacity: .35; cursor: default; }
 /* Sits on top of the phone keyboard while typing, since number keypads have no Enter key. */
 .kb-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; gap: 10px; justify-content: center;
-  padding: 8px 16px; background: var(--paper); border-top: 1px solid var(--rule);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  padding: 6px max(24px, env(safe-area-inset-right)) 6px max(24px, env(safe-area-inset-left));
+  background: var(--paper); border-top: 1px solid var(--rule); box-shadow: 0 -6px 16px -10px rgba(0,0,0,.35);
 }
-.kb-bar .key { flex: 1; max-width: 220px; height: 46px; }
+.kb-bar[hidden] { display: none; }
+/* Same width and 2:3 split as the on-screen pad's bottom row, so the keys line up with it. */
+.kb-bar-inner { display: grid; grid-template-columns: 2fr 3fr; gap: 8px; width: min(100%, 380px); margin: 0 auto; }
+.kb-bar .key { grid-column: auto; height: 44px; }
 
 .after { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .btn {
@@ -449,8 +453,10 @@ kbd {
     <div class="board" id="board" role="grid" aria-label="Guesses" data-i18n-aria="guesses"></div>
     <input class="phone-keys" id="phoneKeys" type="text" inputmode="numeric" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
     <div class="kb-bar" id="kbBar" hidden>
-      <button type="button" class="key wide" id="kbDel">⌫</button>
-      <button type="button" class="key wide enter" id="kbEnter">Enter</button>
+      <div class="kb-bar-inner">
+        <button type="button" class="key wide" id="kbDel">⌫</button>
+        <button type="button" class="key wide enter" id="kbEnter">Enter</button>
+      </div>
     </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
@@ -1069,7 +1075,7 @@ kbd {
     ent.type = 'button'; ent.className = 'key wide enter'; ent.id = 'enterKey'; ent.textContent = tr('key_enter'); ent.onclick = () => press('Enter');
     padEl.append(del, ent);
     document.getElementById('kbEnter').textContent = tr('key_enter');
-    document.getElementById('kbDel').setAttribute('aria-label', tr('key_delete'));
+    document.getElementById('kbDel').textContent = tr('key_delete');
   }
 
   function rowEl(i) { return boardEl.children[i]; }
@@ -1308,20 +1314,28 @@ kbd {
     if (over) return;
     armPhoneKeys();
     phoneKeys.focus({ preventScroll: true });
-    kbBar.hidden = false; placeKbBar();
+    placeKbBar();
   });
-  // The bar follows the top of the keyboard: on iPhone the keyboard covers the page instead of shrinking it.
+  // The bar follows the top of the keyboard: on phones the keyboard covers the page instead of shrinking it.
+  // It only shows while the keyboard is really open, so it never sits on top of the on-screen pad
+  // (before the keyboard slides up, or after it is dismissed while the field keeps focus).
   const kbBar = document.getElementById('kbBar');
+  let fullHeight = window.visualViewport ? visualViewport.height : window.innerHeight;
   function placeKbBar() {
     const vv = window.visualViewport;
-    const gap = vv ? window.innerHeight - vv.height - vv.offsetTop : 0;
-    kbBar.style.bottom = Math.max(0, Math.round(gap)) + 'px';
+    if (!vv) { kbBar.hidden = document.activeElement !== phoneKeys; return; }
+    if (document.activeElement !== phoneKeys) fullHeight = Math.max(vv.height, window.innerHeight);
+    const gap = window.innerHeight - vv.height - vv.offsetTop;
+    const keyboardUp = document.activeElement === phoneKeys && fullHeight - vv.height > 120;
+    kbBar.hidden = !keyboardUp;
+    if (keyboardUp) kbBar.style.bottom = Math.max(0, Math.round(gap)) + 'px';
   }
   if (window.visualViewport) {
     visualViewport.addEventListener('resize', placeKbBar);
     visualViewport.addEventListener('scroll', placeKbBar);
   }
-  phoneKeys.addEventListener('focus', () => { kbBar.hidden = false; placeKbBar(); });
+  window.addEventListener('orientationchange', () => { kbBar.hidden = true; setTimeout(() => { fullHeight = window.innerHeight; placeKbBar(); }, 400); });
+  phoneKeys.addEventListener('focus', placeKbBar);
   phoneKeys.addEventListener('blur', () => {
     setTimeout(() => { if (document.activeElement !== phoneKeys) kbBar.hidden = true; }, 150);
   });
