@@ -166,7 +166,12 @@ button { font: inherit; color: inherit; }
 .legend .lg { background: var(--hit); border-color: var(--hit); }
 .legend .ly { background: var(--near); border-color: var(--near); }
 
-.board { display: grid; gap: 8px; }
+.board { display: grid; gap: 8px; cursor: text; }
+/* Phones: no double-tap zoom on game controls, so quick repeated taps (7 7) all register. */
+html { -webkit-text-size-adjust: 100%; }
+button, .board, .m24-line { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* Hidden field that opens the phone's number keyboard when the board is tapped. 16px stops iOS zooming in on focus. */
+.phone-keys { position: absolute; left: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px; pointer-events: none; }
 .row { display: grid; grid-template-columns: repeat(4, var(--tile)) minmax(84px, auto); gap: 8px; align-items: center; position: relative; }
 .hint { display: flex; flex-direction: column; gap: 3px; padding-left: 4px; }
 .hint span {
@@ -436,6 +441,7 @@ kbd {
       <button class="btn ghost" type="button" id="hintBtn">Ask for a clue</button>
     </div>
     <div class="board" id="board" role="grid" aria-label="Guesses" data-i18n-aria="guesses"></div>
+    <input class="phone-keys" id="phoneKeys" type="text" inputmode="numeric" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
     <div class="pad" id="pad"></div>
@@ -1166,6 +1172,7 @@ kbd {
       setStatus(() => tr('out_status', code), 'lose');
     }
     afterEl.hidden = false;
+    phoneKeys.blur();
     hintBtn.disabled = true;
     if (mode === 'extreme') unmaskAll();
     recordStats(won, n);
@@ -1273,8 +1280,27 @@ kbd {
       if (e.key === 'Enter' && document.activeElement && document.activeElement.tagName === 'BUTTON' && !document.activeElement.classList.contains('key')) return;
       e.preventDefault();
       press(e.key);
-      if (e.key === 'Enter' && document.activeElement) document.activeElement.blur();
+      if (e.key === 'Enter' && document.activeElement && document.activeElement !== phoneKeys) document.activeElement.blur();
     }
+  });
+
+  /* ---------- phone keyboard ---------- */
+  // Tapping the board opens the phone's number keyboard. The field always holds one space, so a
+  // shorter value means Backspace and anything after the space is new digits. Desktop keys and
+  // phones that send real key events are handled by the keydown listener above, which cancels the
+  // typed character, so nothing is counted twice.
+  const phoneKeys = document.getElementById('phoneKeys');
+  const armPhoneKeys = () => { phoneKeys.value = ' '; try { phoneKeys.setSelectionRange(1, 1); } catch (e) {} };
+  boardEl.addEventListener('click', () => {
+    if (over) return;
+    armPhoneKeys();
+    phoneKeys.focus({ preventScroll: true });
+  });
+  phoneKeys.addEventListener('input', () => {
+    const v = phoneKeys.value;
+    if (v.length < 1) press('Backspace');
+    else v.slice(1).replace(/\D/g, '').split('').forEach(d => press(d));
+    armPhoneKeys();
   });
 
   /* ---------- stats ---------- */
