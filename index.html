@@ -166,12 +166,10 @@ button { font: inherit; color: inherit; }
 .legend .lg { background: var(--hit); border-color: var(--hit); }
 .legend .ly { background: var(--near); border-color: var(--near); }
 
-.board { display: grid; gap: 8px; cursor: text; }
+.board { display: grid; gap: 8px; }
 /* Phones: no double-tap zoom on game controls, so quick repeated taps (7 7) all register. */
 html { -webkit-text-size-adjust: 100%; }
 button, .board, .m24-line { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-/* Hidden field that opens the phone's number keyboard when the board is tapped. 16px stops iOS zooming in on focus. */
-.phone-keys { position: absolute; left: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; font-size: 16px; pointer-events: none; }
 .row { display: grid; grid-template-columns: repeat(4, var(--tile)) minmax(84px, auto); gap: 8px; align-items: center; position: relative; }
 .hint { display: flex; flex-direction: column; gap: 3px; padding-left: 4px; }
 .hint span {
@@ -233,16 +231,6 @@ button, .board, .m24-line { touch-action: manipulation; -webkit-tap-highlight-co
 .key.wide { grid-column: span 2; font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
 .key.enter { grid-column: span 3; background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .key.enter:disabled { opacity: .35; cursor: default; }
-/* Sits on top of the phone keyboard while typing, since number keypads have no Enter key. */
-.kb-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  padding: 6px max(24px, env(safe-area-inset-right)) 6px max(24px, env(safe-area-inset-left));
-  background: var(--paper); border-top: 1px solid var(--rule); box-shadow: 0 -6px 16px -10px rgba(0,0,0,.35);
-}
-.kb-bar[hidden] { display: none; }
-/* Same width and 2:3 split as the on-screen pad's bottom row, so the keys line up with it. */
-.kb-bar-inner { display: grid; grid-template-columns: 2fr 3fr; gap: 8px; width: min(100%, 380px); margin: 0 auto; }
-.kb-bar .key { grid-column: auto; height: 44px; }
 
 .after { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .btn {
@@ -383,6 +371,15 @@ kbd {
   .row-num { display: none; }
   .key { height: 48px; }
 }
+/* Phones: keep the keypad pinned to the bottom of the screen so it is always in reach while you scroll the board. */
+@media (max-width: 600px) and (pointer: coarse) {
+  #pad {
+    position: sticky; bottom: 0; z-index: 5; background: var(--paper);
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+    /* Stretch the background and a hairline across the full screen width. */
+    box-shadow: 0 0 0 100vmax var(--paper), 0 -1px 0 100vmax var(--rule); clip-path: inset(-1px -100vmax -100vmax);
+  }
+}
 </style>
 </head>
 <body>
@@ -451,13 +448,6 @@ kbd {
       <button class="btn ghost" type="button" id="hintBtn">Ask for a clue</button>
     </div>
     <div class="board" id="board" role="grid" aria-label="Guesses" data-i18n-aria="guesses"></div>
-    <input class="phone-keys" id="phoneKeys" type="text" inputmode="numeric" enterkeyhint="enter" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
-    <div class="kb-bar" id="kbBar" hidden>
-      <div class="kb-bar-inner">
-        <button type="button" class="key wide" id="kbDel">⌫</button>
-        <button type="button" class="key wide enter" id="kbEnter">Enter</button>
-      </div>
-    </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
     <div class="pad" id="pad"></div>
@@ -1074,8 +1064,6 @@ kbd {
     const ent = document.createElement('button');
     ent.type = 'button'; ent.className = 'key wide enter'; ent.id = 'enterKey'; ent.textContent = tr('key_enter'); ent.onclick = () => press('Enter');
     padEl.append(del, ent);
-    document.getElementById('kbEnter').textContent = tr('key_enter');
-    document.getElementById('kbDel').textContent = tr('key_delete');
   }
 
   function rowEl(i) { return boardEl.children[i]; }
@@ -1092,7 +1080,6 @@ kbd {
       }
     });
     document.getElementById('enterKey').disabled = current.length !== LEN;
-    document.getElementById('kbEnter').disabled = current.length !== LEN;
   }
 
   function paintRow(i, guess, res, animate) {
@@ -1191,7 +1178,6 @@ kbd {
       setStatus(() => tr('out_status', code), 'lose');
     }
     afterEl.hidden = false;
-    phoneKeys.blur();
     hintBtn.disabled = true;
     if (mode === 'extreme') unmaskAll();
     recordStats(won, n);
@@ -1299,57 +1285,8 @@ kbd {
       if (e.key === 'Enter' && document.activeElement && document.activeElement.tagName === 'BUTTON' && !document.activeElement.classList.contains('key')) return;
       e.preventDefault();
       press(e.key);
-      if (e.key === 'Enter' && document.activeElement && document.activeElement !== phoneKeys) document.activeElement.blur();
+      if (e.key === 'Enter' && document.activeElement) document.activeElement.blur();
     }
-  });
-
-  /* ---------- phone keyboard ---------- */
-  // Tapping the board opens the phone's number keyboard. The field always holds one space, so a
-  // shorter value means Backspace and anything after the space is new digits. Desktop keys and
-  // phones that send real key events are handled by the keydown listener above, which cancels the
-  // typed character, so nothing is counted twice.
-  const phoneKeys = document.getElementById('phoneKeys');
-  const armPhoneKeys = () => { phoneKeys.value = ' '; try { phoneKeys.setSelectionRange(1, 1); } catch (e) {} };
-  boardEl.addEventListener('click', () => {
-    if (over) return;
-    armPhoneKeys();
-    phoneKeys.focus({ preventScroll: true });
-    placeKbBar();
-  });
-  // The bar follows the top of the keyboard: on phones the keyboard covers the page instead of shrinking it.
-  // It only shows while the keyboard is really open, so it never sits on top of the on-screen pad
-  // (before the keyboard slides up, or after it is dismissed while the field keeps focus).
-  const kbBar = document.getElementById('kbBar');
-  let fullHeight = window.visualViewport ? visualViewport.height : window.innerHeight;
-  function placeKbBar() {
-    const vv = window.visualViewport;
-    if (!vv) { kbBar.hidden = document.activeElement !== phoneKeys; return; }
-    if (document.activeElement !== phoneKeys) fullHeight = Math.max(vv.height, window.innerHeight);
-    const gap = window.innerHeight - vv.height - vv.offsetTop;
-    const keyboardUp = document.activeElement === phoneKeys && fullHeight - vv.height > 120;
-    kbBar.hidden = !keyboardUp;
-    if (keyboardUp) kbBar.style.bottom = Math.max(0, Math.round(gap)) + 'px';
-  }
-  if (window.visualViewport) {
-    visualViewport.addEventListener('resize', placeKbBar);
-    visualViewport.addEventListener('scroll', placeKbBar);
-  }
-  window.addEventListener('orientationchange', () => { kbBar.hidden = true; setTimeout(() => { fullHeight = window.innerHeight; placeKbBar(); }, 400); });
-  phoneKeys.addEventListener('focus', placeKbBar);
-  phoneKeys.addEventListener('blur', () => {
-    setTimeout(() => { if (document.activeElement !== phoneKeys) kbBar.hidden = true; }, 150);
-  });
-  // Keep the keyboard open: stop the bar's buttons from taking focus away from the typing field.
-  ['pointerdown', 'mousedown'].forEach(ev => kbBar.addEventListener(ev, e => e.preventDefault()));
-  const kbTap = key => () => { press(key); if (!over) phoneKeys.focus({ preventScroll: true }); };
-  document.getElementById('kbEnter').onclick = kbTap('Enter');
-  document.getElementById('kbDel').onclick = kbTap('Backspace');
-
-  phoneKeys.addEventListener('input', () => {
-    const v = phoneKeys.value;
-    if (v.length < 1) press('Backspace');
-    else v.slice(1).replace(/\D/g, '').split('').forEach(d => press(d));
-    armPhoneKeys();
   });
 
   /* ---------- stats ---------- */
