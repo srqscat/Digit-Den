@@ -184,26 +184,26 @@ button { font: inherit; color: inherit; }
 .board.easy .hint { display: none; }
 .stats-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); margin-bottom: -12px; }
 .rules { margin: 0; color: var(--ink-soft); max-width: 62ch; }
-/* Collapsible "How to play" panel shared by every game. Starts closed. */
-.howto { max-width: 62ch; color: var(--ink-soft); font-size: 0.92rem; }
-.howto summary {
-  list-style: none; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
-  color: var(--ink); font-weight: 600; font-size: 0.9rem; padding: 2px 0; border-radius: 6px; user-select: none;
-}
+/* Collapsible "How to play" panel shared by every game. Starts closed and sits on its own full-width row.
+   The <summary> itself stays display: block (Safari mis-paints a flex <summary> once the panel opens);
+   the inner .howto-row does the layout. */
+.howto { width: 100%; max-width: 62ch; color: var(--ink-soft); font-size: 0.92rem; border-block: 1px solid var(--rule); }
+.howto summary { display: block; list-style: none; cursor: pointer; border-radius: 6px; -webkit-user-select: none; user-select: none; }
 .howto summary::-webkit-details-marker { display: none; }
-.howto summary::after {
-  content: ""; width: 6px; height: 6px; margin-left: 2px; border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
-  transform: translateY(-2px) rotate(45deg); transition: transform .15s;
-}
-.howto[open] summary::after { transform: translateY(1px) rotate(-135deg); }
-.howto summary:hover .q { background: var(--accent); color: var(--card); }
+.howto summary::marker { content: ""; }
+.howto-row { display: flex; align-items: center; gap: 8px; padding: 9px 2px; color: var(--ink); font-weight: 600; font-size: 0.9rem; }
 .howto .q {
-  width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent);
-  display: inline-grid; place-items: center; font-size: 0.7rem; font-weight: 800; line-height: 1; transition: background .15s, color .15s;
+  flex: none; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent);
+  display: inline-grid; place-items: center; font-size: 0.7rem; font-weight: 800; line-height: 1;
 }
-.howto-body { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.howto .chev {
+  flex: none; margin-left: auto; margin-right: 4px; width: 7px; height: 7px;
+  border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: translateY(-2px) rotate(45deg);
+}
+.howto[open] .chev { transform: translateY(2px) rotate(-135deg); }
+@media (hover: hover) { .howto summary:hover .q { background: var(--accent); color: var(--card); } }
+.howto-body { display: flex; flex-direction: column; gap: 8px; padding: 2px 2px 12px; }
 .howto-body p { margin: 0; }
-@media (prefers-reduced-motion: reduce) { .howto summary::after, .howto .q { transition: none; } }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem; color: var(--ink-soft); }
 .legend span { display: inline-block; }
 .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1.5px solid var(--rule); vertical-align: -2px; margin-right: 6px; }
@@ -618,7 +618,7 @@ kbd {
         <button type="button" role="radio" data-mode="extreme" id="mode-extreme" data-i18n="mode_extreme">Extreme</button>
       </div>
       <details class="howto">
-        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <summary><span class="howto-row"><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span><span class="chev" aria-hidden="true"></span></span></summary>
         <div class="howto-body">
           <p class="rules" id="rules"></p>
           <div class="legend" id="legend"></div>
@@ -658,7 +658,7 @@ kbd {
         <button type="button" role="radio" data-range="13" id="m24-r13" data-i18n="range13">Numbers 1–13</button>
       </div>
       <details class="howto">
-        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <summary><span class="howto-row"><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span><span class="chev" aria-hidden="true"></span></span></summary>
         <div class="howto-body">
         <p data-i18n="howto_goal">Use all four numbers once, with + − × ÷ and parentheses, to make 24.</p>
         <p data-i18n="howto_p">Tap the cards and buttons to write your answer. Tap anywhere in the answer bar to move the cursor, and new pieces go in at the cursor. The answer is checked as soon as all four numbers are in and every parenthesis is closed. × and ÷ go before + and −, so use parentheses to change the order.</p>
@@ -722,7 +722,7 @@ kbd {
       </div>
       <div class="sl-prog" id="slProg" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="slProgFill"></div></div>
       <details class="howto">
-        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <summary><span class="howto-row"><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span><span class="chev" aria-hidden="true"></span></span></summary>
         <div class="howto-body">
           <p data-i18n="sl_goal">Get every numbered block onto the square with its number.</p>
           <p data-i18n="sl_howto_p"></p>
