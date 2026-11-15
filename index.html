@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Digit Den</title>
-<meta name="description" content="Digit Den: small math and logic puzzles. Crack a hidden 4-digit code, or make 24 from four numbers.">
+<title>Puzzle Den</title>
+<meta name="description" content="Puzzle Den: small logic, number and sliding-block puzzles. Crack a hidden code, make 24 from four numbers, or slide blocks into place.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#12161d" media="(prefers-color-scheme: dark)">
@@ -73,11 +73,16 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- header ---------- */
-.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.brand { display: flex; flex-direction: column; gap: 2px; }
+/* Title and tools share the first row at every width; the tagline gets its own row underneath. */
+.masthead {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 4px;
+}
+.brand { display: contents; }
 .brand h1 {
+  grid-column: 1; grid-row: 1; min-width: 0; white-space: nowrap;
   margin: 0; font-weight: 800; font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1; letter-spacing: -0.03em;
 }
+.brand p { grid-column: 1 / -1; grid-row: 2; }
 .brand h1 .d { font-family: var(--font-digit); font-weight: 700; color: var(--accent); }
 .brand p { margin: 0; color: var(--ink-soft); }
 .back {
@@ -85,7 +90,7 @@ button { font: inherit; color: inherit; }
   font-size: 0.9rem; font-weight: 600; background: var(--card);
 }
 .back:hover { border-color: var(--ink-soft); }
-.top-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.top-tools { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .lang { position: relative; display: inline-flex; }
 .lang select {
   appearance: none; -webkit-appearance: none; border: 1.5px solid var(--rule); border-radius: 999px;
@@ -95,6 +100,25 @@ button { font: inherit; color: inherit; }
 .lang::after {
   content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px; pointer-events: none;
   border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: translateY(-70%) rotate(45deg);
+}
+.back-short, .lang-code { display: none; }
+/* Phones: shorter labels so the title, back button and language picker all fit on one line.
+   The language pill shows a code (EN, ES…); the native picker underneath still lists full names. */
+@media (max-width: 600px) {
+  .masthead { column-gap: 8px; }
+  .brand h1 { font-size: clamp(1.3rem, 6.6vw, 2.2rem); }
+  .top-tools { gap: 6px; }
+  .back { padding: 5px 11px; font-size: 0.82rem; white-space: nowrap; }
+  .back-long { display: none; }
+  .back-short { display: inline; }
+  .lang-code {
+    display: inline-block; border: 1.5px solid var(--rule); border-radius: 999px; background: var(--card);
+    padding: 5px 24px 5px 11px; font-size: 0.82rem; font-weight: 600; line-height: 1.5; color: var(--ink);
+  }
+  .lang select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; }
+  .lang:hover .lang-code { border-color: var(--ink-soft); }
+  .lang:has(select:focus-visible) .lang-code { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .lang::after { right: 10px; width: 5px; height: 5px; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -160,6 +184,26 @@ button { font: inherit; color: inherit; }
 .board.easy .hint { display: none; }
 .stats-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); margin-bottom: -12px; }
 .rules { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+/* Collapsible "How to play" panel shared by every game. Starts closed. */
+.howto { max-width: 62ch; color: var(--ink-soft); font-size: 0.92rem; }
+.howto summary {
+  list-style: none; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  color: var(--ink); font-weight: 600; font-size: 0.9rem; padding: 2px 0; border-radius: 6px; user-select: none;
+}
+.howto summary::-webkit-details-marker { display: none; }
+.howto summary::after {
+  content: ""; width: 6px; height: 6px; margin-left: 2px; border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft);
+  transform: translateY(-2px) rotate(45deg); transition: transform .15s;
+}
+.howto[open] summary::after { transform: translateY(1px) rotate(-135deg); }
+.howto summary:hover .q { background: var(--accent); color: var(--card); }
+.howto .q {
+  width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent);
+  display: inline-grid; place-items: center; font-size: 0.7rem; font-weight: 800; line-height: 1; transition: background .15s, color .15s;
+}
+.howto-body { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.howto-body p { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .howto summary::after, .howto .q { transition: none; } }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem; color: var(--ink-soft); }
 .legend span { display: inline-block; }
 .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1.5px solid var(--rule); vertical-align: -2px; margin-right: 6px; }
@@ -248,11 +292,6 @@ button, .board, .m24-line { touch-action: manipulation; -webkit-tap-highlight-co
 /* Order on screen: clock, cards, operations, answer bar, then actions, so the play area fits in one view. */
 #make-24 { gap: 14px; }
 #make-24 .game-head { gap: 8px; }
-.m24-howto { color: var(--ink-soft); max-width: 62ch; font-size: 0.92rem; }
-.m24-howto summary { cursor: pointer; color: var(--ink); font-weight: 600; }
-.m24-howto summary span { color: var(--accent); font-weight: 700; margin-left: 6px; font-size: 0.85rem; }
-.m24-howto[open] summary span { display: none; }
-.m24-howto p { margin: 8px 0 0; }
 .keys { font-size: 0.85rem; }
 kbd {
   font-family: var(--font-digit); font-size: 0.78rem; padding: 0 5px; border: 1px solid var(--rule);
@@ -348,12 +387,12 @@ kbd {
 .sl-frame { width: min(100%, 420px); padding: 10px; background: var(--card); border: 1.5px solid var(--rule); border-radius: 18px; }
 .sl-board {
   --r: 5; --c: 5; position: relative; width: 100%; aspect-ratio: var(--c) / var(--r);
-  touch-action: none; user-select: none; -webkit-user-select: none; container-type: inline-size;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; container-type: inline-size;
   transition: opacity .2s;
 }
 .sl-cells { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--c), 1fr); grid-template-rows: repeat(var(--r), 1fr); }
 .sl-cell { margin: 2px; border-radius: 9px; }
-.sl-cell.path { background: var(--sl-path); box-shadow: inset 0 -3px 0 var(--sl-edge); cursor: pointer; }
+.sl-cell.path { background: var(--sl-path); box-shadow: inset 0 -3px 0 var(--sl-edge); }
 .sl-cell.home { position: relative; display: grid; place-items: center; }
 .sl-cell.home::before {
   content: ""; position: absolute; inset: 14%; border-radius: 7px; border: 2.5px dashed var(--bc);
@@ -416,9 +455,10 @@ kbd {
 @media (prefers-reduced-motion: reduce) { .sl-block, .sl-block span { transition: none !important; animation: none !important; } }
 
 /* Phones: the message under the board always has room for two lines, so it never pushes the page around
-   while you swipe, and the whole board card (padding included) takes swipes instead of scrolling the page. */
+   while you swipe. Only a drag that starts on a block moves anything (blocks are touch-action: none);
+   everywhere else on the board card the page scrolls as normal. */
 #slStatus { min-height: 3em; display: flex; align-items: center; justify-content: center; }
-.sl-frame { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.sl-frame { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .sl-pad { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Level header, stage progress bar and the level picker. */
 .sl-where { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -519,12 +559,12 @@ kbd {
 <div class="wrap">
   <header class="masthead">
     <div class="brand">
-      <h1>Digit Den<span class="d">.</span></h1>
-      <p id="tagline">Small puzzles for numbers people.</p>
+      <h1>Puzzle Den<span class="d">.</span></h1>
+      <p id="tagline">Small puzzles for curious minds.</p>
     </div>
     <div class="top-tools">
-      <button class="back" id="backBtn" type="button" hidden data-i18n="back">← All games</button>
-      <label class="lang"><span class="sr-only" data-i18n="lang_label">Language</span>
+      <button class="back" id="backBtn" type="button" hidden><span class="back-long" data-i18n="back">← All games</span><span class="back-short" data-i18n="back_short">← Games</span></button>
+      <label class="lang"><span class="sr-only" data-i18n="lang_label">Language</span><span class="lang-code" id="langCode" aria-hidden="true">EN</span>
         <select id="langSel">
           <option value="en" lang="en">English</option>
           <option value="es" lang="es">Español</option>
@@ -577,8 +617,13 @@ kbd {
         <button type="button" role="radio" data-mode="hard" id="mode-hard" data-i18n="mode_hard">Hard</button>
         <button type="button" role="radio" data-mode="extreme" id="mode-extreme" data-i18n="mode_extreme">Extreme</button>
       </div>
-      <p class="rules" id="rules"></p>
-      <div class="legend" id="legend"></div>
+      <details class="howto">
+        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <div class="howto-body">
+          <p class="rules" id="rules"></p>
+          <div class="legend" id="legend"></div>
+        </div>
+      </details>
     </div>
 
     <div class="hintbar" id="hintBar" hidden>
@@ -612,10 +657,13 @@ kbd {
         <button type="button" role="radio" data-range="9" id="m24-r9" data-i18n="range9">Numbers 1–9</button>
         <button type="button" role="radio" data-range="13" id="m24-r13" data-i18n="range13">Numbers 1–13</button>
       </div>
-      <details class="m24-howto" id="m24HowTo">
-        <summary data-i18n-html="howto_summary">Use all four numbers once, with + − × ÷ and parentheses, to make 24.<span>How to play</span></summary>
+      <details class="howto">
+        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <div class="howto-body">
+        <p data-i18n="howto_goal">Use all four numbers once, with + − × ÷ and parentheses, to make 24.</p>
         <p data-i18n="howto_p">Tap the cards and buttons to write your answer. Tap anywhere in the answer bar to move the cursor, and new pieces go in at the cursor. The answer is checked as soon as all four numbers are in and every parenthesis is closed. × and ÷ go before + and −, so use parentheses to change the order.</p>
         <p class="keys" data-i18n-html="howto_keys">Keyboard: <kbd>1</kbd>–<kbd>4</kbd> add a card, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> add a symbol, <kbd>←</kbd> <kbd>→</kbd> move the cursor, <kbd>Backspace</kbd> deletes.</p>
+        </div>
       </details>
     </div>
 
@@ -673,10 +721,13 @@ kbd {
         <button class="btn ghost sl-levels-btn" type="button" id="slLevels" data-i18n="sl_levels">Levels</button>
       </div>
       <div class="sl-prog" id="slProg" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="slProgFill"></div></div>
-      <details class="m24-howto">
-        <summary data-i18n-html="sl_howto_summary">Get every numbered block onto the square with its number.<span>How to play</span></summary>
-        <p data-i18n="sl_howto_p"></p>
-        <p class="keys" data-i18n-html="sl_howto_keys"></p>
+      <details class="howto">
+        <summary><span class="q" aria-hidden="true">?</span><span data-i18n="howto_title">How to play</span></summary>
+        <div class="howto-body">
+          <p data-i18n="sl_goal">Get every numbered block onto the square with its number.</p>
+          <p data-i18n="sl_howto_p"></p>
+          <p class="keys" data-i18n-html="sl_howto_keys"></p>
+        </div>
       </details>
     </div>
 
@@ -2487,10 +2538,10 @@ function slHintFrom(pz, pos, cap = 1500000) {
   const STR = {
     en: {
       lang_label: 'Language', skip: 'Skip to the games',
-      tag_hub: 'Small puzzles for numbers people.',
+      tag_hub: 'Small puzzles for curious minds.',
       tag_crack: 'Pick a guess. Read the clues. Narrow it down.',
       tag_24: 'Four numbers, four operations, one target.',
-      back: '← All games', hub_aria: 'Games', play: 'Play', soon: 'Coming soon',
+      back: '← All games', back_short: '← Games', hub_aria: 'Games', play: 'Play', soon: 'Coming soon',
       crack_name: 'Crack the Code',
       crack_desc: 'Find the hidden 4-digit code. Four levels, from color clues on every digit to bare counts played from memory.',
       m24_name: 'Make 24', m24_desc: 'Combine four numbers with + − × ÷ to hit exactly 24.',
@@ -2541,7 +2592,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       ask_clue: n => `Ask for a clue (${n} left)`, no_clues: 'No clues left',
       no_new_clue: 'No new clue to give right now.', clue_added: 'New clue added.',
       range_aria: 'Number range', range9: 'Numbers 1–9', range13: 'Numbers 1–13',
-      howto_summary: 'Use all four numbers once, with + − × ÷ and parentheses, to make 24.<span>How to play</span>',
+      howto_goal: 'Use all four numbers once, with + − × ÷ and parentheses, to make 24.', howto_title: 'How to play',
       howto_p: 'Tap the cards and buttons to write your answer. Tap anywhere in the answer bar to move the cursor, and new pieces go in at the cursor. The answer is checked as soon as all four numbers are in and every parenthesis is closed. × and ÷ go before + and −, so use parentheses to change the order.',
       howto_keys: 'Keyboard: <kbd>1</kbd>–<kbd>4</kbd> add a card, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> add a symbol, <kbd>←</kbd> <kbd>→</kbd> move the cursor, <kbd>Backspace</kbd> deletes.',
       puzzle: 'Puzzle', stopwatch: 'Stopwatch', cards_aria: 'Number cards', ops_aria: 'Operations',
@@ -2573,7 +2624,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       new_range: r => `New puzzle with numbers from 1 to ${r}.`, next_puzzle: 'Next puzzle',
       sl_name: 'Slide Path', 
       tag_sl: 'Blocks slide until something stops them. Plan the stops.',
-      sl_howto_summary: 'Get every numbered block onto the square with its number.<span>How to play</span>',
+      sl_goal: 'Get every numbered block onto the square with its number.',
       
       sl_howto_keys: 'Swipe a block, or tap it and use the arrows. Keyboard: <kbd>1</kbd>–<kbd>9</kbd> pick a block (<kbd>0</kbd> for 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> slide it, <kbd>Backspace</kbd> undoes.',
       sl_moves: 'Moves', sl_par: 'Par', sl_board: 'Puzzle board', sl_pad: 'Slide the selected block',
@@ -2621,10 +2672,10 @@ function slHintFrom(pz, pos, cap = 1500000) {
     },
     es: {
       lang_label: 'Idioma', skip: 'Saltar a los juegos',
-      tag_hub: 'Pequeños acertijos para amantes de los números.',
+      tag_hub: 'Pequeños acertijos para mentes curiosas.',
       tag_crack: 'Prueba un código. Lee las pistas. Descarta opciones.',
       tag_24: 'Cuatro números, cuatro operaciones, un objetivo.',
-      back: '← Todos los juegos', hub_aria: 'Juegos', play: 'Jugar', soon: 'Próximamente',
+      back: '← Todos los juegos', back_short: '← Juegos', hub_aria: 'Juegos', play: 'Jugar', soon: 'Próximamente',
       crack_name: 'Descifra el código',
       crack_desc: 'Encuentra el código secreto de 4 cifras. Cuatro niveles, desde colores en cada cifra hasta solo recuentos, jugados de memoria.',
       m24_name: 'Haz 24', m24_desc: 'Combina cuatro números con + − × ÷ para llegar exactamente a 24.',
@@ -2675,7 +2726,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       ask_clue: n => `Pedir una pista (quedan ${n})`, no_clues: 'No quedan pistas',
       no_new_clue: 'Ahora mismo no hay ninguna pista nueva.', clue_added: 'Pista nueva añadida.',
       range_aria: 'Rango de números', range9: 'Números 1–9', range13: 'Números 1–13',
-      howto_summary: 'Usa los cuatro números una vez, con + − × ÷ y paréntesis, para hacer 24.<span>Cómo se juega</span>',
+      howto_goal: 'Usa los cuatro números una vez, con + − × ÷ y paréntesis, para hacer 24.', howto_title: 'Cómo se juega',
       howto_p: 'Toca las cartas y los botones para escribir tu respuesta. Toca en cualquier parte de la barra de respuesta para mover el cursor; las piezas nuevas se insertan en el cursor. La respuesta se comprueba en cuanto están los cuatro números y todos los paréntesis cerrados. × y ÷ van antes que + y −, así que usa paréntesis para cambiar el orden.',
       howto_keys: 'Teclado: <kbd>1</kbd>–<kbd>4</kbd> añaden una carta, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> añaden un símbolo, <kbd>←</kbd> <kbd>→</kbd> mueven el cursor, <kbd>Retroceso</kbd> borra.',
       puzzle: 'Puzle', stopwatch: 'Cronómetro', cards_aria: 'Cartas numéricas', ops_aria: 'Operaciones',
@@ -2707,7 +2758,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       new_range: r => `Nuevo puzle con números del 1 al ${r}.`, next_puzzle: 'Siguiente puzle',
       sl_name: 'Desliza al sitio', 
       tag_sl: 'Los bloques se deslizan hasta chocar. Planea dónde paran.',
-      sl_howto_summary: 'Lleva cada bloque numerado a la casilla con su número.<span>Cómo se juega</span>',
+      sl_goal: 'Lleva cada bloque numerado a la casilla con su número.',
       
       sl_howto_keys: 'Desliza un bloque con el dedo, o tócalo y usa las flechas. Teclado: <kbd>1</kbd>–<kbd>9</kbd> eligen un bloque (<kbd>0</kbd> para el 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> lo deslizan, <kbd>Retroceso</kbd> deshace.',
       sl_moves: 'Movimientos', sl_par: 'Par', sl_board: 'Tablero', sl_pad: 'Deslizar el bloque elegido',
@@ -2755,10 +2806,10 @@ function slHintFrom(pz, pos, cap = 1500000) {
     },
     fr: {
       lang_label: 'Langue', skip: 'Aller aux jeux',
-      tag_hub: 'De petites énigmes pour les amateurs de chiffres.',
+      tag_hub: 'De petites énigmes pour esprits curieux.',
       tag_crack: 'Proposez un code. Lisez les indices. Resserrez l’étau.',
       tag_24: 'Quatre nombres, quatre opérations, un objectif.',
-      back: '← Tous les jeux', hub_aria: 'Jeux', play: 'Jouer', soon: 'Bientôt',
+      back: '← Tous les jeux', back_short: '← Jeux', hub_aria: 'Jeux', play: 'Jouer', soon: 'Bientôt',
       crack_name: 'Percez le code',
       crack_desc: 'Trouvez le code secret à 4 chiffres. Quatre niveaux, des couleurs sur chaque chiffre jusqu’aux simples comptes, joués de mémoire.',
       m24_name: 'Faites 24', m24_desc: 'Combinez quatre nombres avec + − × ÷ pour obtenir exactement 24.',
@@ -2810,7 +2861,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       ask_clue: n => `Demander un indice (${n} restant${S(n, 's')})`, no_clues: 'Plus d’indices',
       no_new_clue: 'Pas de nouvel indice pour le moment.', clue_added: 'Nouvel indice ajouté.',
       range_aria: 'Plage de nombres', range9: 'Nombres 1–9', range13: 'Nombres 1–13',
-      howto_summary: 'Utilisez les quatre nombres une fois, avec + − × ÷ et des parenthèses, pour faire 24.<span>Comment jouer</span>',
+      howto_goal: 'Utilisez les quatre nombres une fois, avec + − × ÷ et des parenthèses, pour faire 24.', howto_title: 'Comment jouer',
       howto_p: 'Touchez les cartes et les boutons pour écrire votre réponse. Touchez n’importe où dans la barre de réponse pour déplacer le curseur ; les nouveaux éléments s’insèrent au curseur. La réponse est vérifiée dès que les quatre nombres sont placés et que toutes les parenthèses sont fermées. × et ÷ passent avant + et −, utilisez donc des parenthèses pour changer l’ordre.',
       howto_keys: 'Clavier : <kbd>1</kbd>–<kbd>4</kbd> ajoutent une carte, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> ajoutent un symbole, <kbd>←</kbd> <kbd>→</kbd> déplacent le curseur, <kbd>Retour arrière</kbd> efface.',
       puzzle: 'Tirage', stopwatch: 'Chronomètre', cards_aria: 'Cartes', ops_aria: 'Opérations',
@@ -2842,7 +2893,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       new_range: r => `Nouveau tirage avec des nombres de 1 à ${r}.`, next_puzzle: 'Tirage suivant',
       sl_name: 'Glisse et place', 
       tag_sl: 'Les blocs glissent jusqu’à buter. Prévoyez les arrêts.',
-      sl_howto_summary: 'Amenez chaque bloc numéroté sur la case qui porte son numéro.<span>Comment jouer</span>',
+      sl_goal: 'Amenez chaque bloc numéroté sur la case qui porte son numéro.',
       
       sl_howto_keys: 'Balayez un bloc, ou touchez-le et utilisez les flèches. Clavier : <kbd>1</kbd>–<kbd>9</kbd> choisissent un bloc (<kbd>0</kbd> pour le 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> le font glisser, <kbd>Retour arrière</kbd> annule.',
       sl_moves: 'Coups', sl_par: 'Par', sl_board: 'Plateau', sl_pad: 'Faire glisser le bloc choisi',
@@ -2890,10 +2941,10 @@ function slHintFrom(pz, pos, cap = 1500000) {
     },
     zh: {
       lang_label: '语言', skip: '跳到游戏',
-      tag_hub: '给数字爱好者的小谜题。',
+      tag_hub: '给好奇心强的人准备的小谜题。',
       tag_crack: '猜一个密码，读懂提示，逐步缩小范围。',
       tag_24: '四个数字，四种运算，一个目标。',
-      back: '← 所有游戏', hub_aria: '游戏', play: '开始', soon: '即将推出',
+      back: '← 所有游戏', back_short: '← 游戏', hub_aria: '游戏', play: '开始', soon: '即将推出',
       crack_name: '破解密码',
       crack_desc: '找出隐藏的 4 位密码。共四个难度，从每位数字的颜色提示，到只凭记忆看数量提示。',
       m24_name: '算 24', m24_desc: '用 + − × ÷ 组合四个数字，正好得到 24。',
@@ -2942,7 +2993,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       ask_clue: n => `要一个提示（还剩 ${n} 次）`, no_clues: '提示已用完',
       no_new_clue: '现在没有新的提示可给。', clue_added: '已添加新提示。',
       range_aria: '数字范围', range9: '数字 1–9', range13: '数字 1–13',
-      howto_summary: '四个数字各用一次，配合 + − × ÷ 和括号，算出 24。<span>玩法说明</span>',
+      howto_goal: '四个数字各用一次，配合 + − × ÷ 和括号，算出 24。', howto_title: '玩法说明',
       howto_p: '点按卡片和按钮来写出答案。点按答案栏的任意位置可移动光标，新内容会插入在光标处。四个数字都用上且括号全部闭合后，答案会立即检查。× 和 ÷ 先于 + 和 − 计算，所以要用括号改变顺序。',
       howto_keys: '键盘：<kbd>1</kbd>–<kbd>4</kbd> 添加卡片，<kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> 添加符号，<kbd>←</kbd> <kbd>→</kbd> 移动光标，<kbd>Backspace</kbd> 删除。',
       puzzle: '题目', stopwatch: '秒表', cards_aria: '数字卡片', ops_aria: '运算',
@@ -2974,7 +3025,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
       new_range: r => `新题目，数字范围 1 到 ${r}。`, next_puzzle: '下一题',
       sl_name: '滑块归位', 
       tag_sl: '方块会一直滑到被挡住为止。规划好停靠点。',
-      sl_howto_summary: '把每个数字方块移到写有相同数字的格子上。<span>玩法说明</span>',
+      sl_goal: '把每个数字方块移到写有相同数字的格子上。',
       
       sl_howto_keys: '滑动方块，或点一下方块再用方向按钮。键盘：<kbd>1</kbd>–<kbd>9</kbd> 选择方块（<kbd>0</kbd> 为 10 号），<kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> 滑动，<kbd>Backspace</kbd> 撤销。',
       sl_moves: '步数', sl_par: '标准', sl_board: '棋盘', sl_pad: '滑动所选方块',
@@ -3039,6 +3090,8 @@ function slHintFrom(pz, pos, cap = 1500000) {
     document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', tr(el.dataset.i18nAria)); });
     const sel = document.getElementById('langSel');
     if (sel) sel.value = lang;
+    const code = document.getElementById('langCode');
+    if (code) code.textContent = lang === 'zh' ? '中文' : lang.toUpperCase();
   }
   applyStatic();
 
@@ -4294,14 +4347,15 @@ function slHintFrom(pz, pos, cap = 1500000) {
   slEl.picker.addEventListener('click', e => { if (e.target === slEl.picker) slHidePicker(); });
 
   /* ---------- input ---------- */
-  // Swipe a block (or anywhere, for the picked block); tap a block to pick it; tap a path square in line with it to send it that way.
+  // Only a block you put your finger (or mouse) on moves: drag it to slide it, tap it to pick it.
+  // Touches that start anywhere else on the board do nothing, so the page scrolls instead.
   let slDrag = null;
   slEl.board.addEventListener('pointerdown', e => {
     if (sl.done || !sl.pz || e.button > 0) return;
     const blk = e.target.closest('.sl-block');
-    const cell = e.target.closest('.sl-cell');
-    slDrag = { x: e.clientX, y: e.clientY, id: e.pointerId, b: blk ? +blk.dataset.b : null, cell: cell ? +cell.dataset.i : null, moved: false };
-    if (blk) { sl.sel = slDrag.b; blk.focus({ preventScroll: true }); slRender(); }
+    if (!blk) return;
+    slDrag = { x: e.clientX, y: e.clientY, id: e.pointerId, b: +blk.dataset.b, moved: false };
+    sl.sel = slDrag.b; blk.focus({ preventScroll: true }); slRender();
     try { slEl.board.setPointerCapture(e.pointerId); } catch (err) {}
     e.preventDefault();
   });
@@ -4311,15 +4365,12 @@ function slHintFrom(pz, pos, cap = 1500000) {
     const dx = e.clientX - slDrag.x, dy = e.clientY - slDrag.y;
     if (Math.hypot(dx, dy) < 18) return;
     slDrag.moved = true;
-    slMove(slDrag.b != null ? slDrag.b : sl.sel, slDirOf(dx, dy));
+    slMove(slDrag.b, slDirOf(dx, dy));
   });
   slEl.board.addEventListener('pointerup', e => {
     if (!slDrag || e.pointerId !== slDrag.id) return;
     const d = slDrag; slDrag = null;
-    if (d.moved || d.b != null || d.cell == null) { if (d.b != null && !d.moved) slStatus(() => tr('sl_picked', d.b + 1)); return; }
-    const [x, y] = slXY(d.cell), [bx, by] = slXY(sl.pos[sl.sel]);
-    if (x === bx && y !== by) slMove(sl.sel, y < by ? 'up' : 'down');
-    else if (y === by && x !== bx) slMove(sl.sel, x < bx ? 'left' : 'right');
+    if (!d.moved) slStatus(() => tr('sl_picked', d.b + 1));
   });
   slEl.board.addEventListener('pointercancel', () => { slDrag = null; });
   document.querySelectorAll('#slPad .key').forEach(k => { k.onclick = () => slMove(sl.sel, k.dataset.dir); });

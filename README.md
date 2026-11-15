@@ -1,8 +1,9 @@
-# Digit Den
+# Puzzle Den
 
 Small math and logic puzzles you can play in your browser.
 
-**Play it here:** puzzle.ph
+**Play it here:** https://srqscat.github.io/digit-den/
+
 ## Games
 
 - **Crack the Code**: find a hidden 4-digit code. Digits can repeat.
