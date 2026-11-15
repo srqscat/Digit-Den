@@ -187,7 +187,7 @@ button { font: inherit; color: inherit; }
 /* Collapsible "How to play" panel shared by every game. Starts closed and sits on its own full-width row.
    The <summary> itself stays display: block (Safari mis-paints a flex <summary> once the panel opens);
    the inner .howto-row does the layout. */
-.howto { width: 100%; max-width: 62ch; color: var(--ink-soft); font-size: 0.92rem; border-block: 1px solid var(--rule); }
+.howto { width: 100%; color: var(--ink-soft); font-size: 0.92rem; border-block: 1px solid var(--rule); }
 .howto summary { display: block; list-style: none; cursor: pointer; border-radius: 6px; -webkit-user-select: none; user-select: none; }
 .howto summary::-webkit-details-marker { display: none; }
 .howto summary::marker { content: ""; }
@@ -203,7 +203,7 @@ button { font: inherit; color: inherit; }
 .howto[open] .chev { transform: translateY(2px) rotate(-135deg); }
 @media (hover: hover) { .howto summary:hover .q { background: var(--accent); color: var(--card); } }
 .howto-body { display: flex; flex-direction: column; gap: 8px; padding: 2px 2px 12px; }
-.howto-body p { margin: 0; }
+.howto-body p, .howto-body .legend { margin: 0; max-width: 62ch; }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.88rem; color: var(--ink-soft); }
 .legend span { display: inline-block; }
 .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1.5px solid var(--rule); vertical-align: -2px; margin-right: 6px; }
