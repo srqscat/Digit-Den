@@ -330,6 +330,124 @@ kbd {
   .op { height: 46px; font-size: 1.4rem; }
 }
 
+/* ---------- slide path ---------- */
+/* Board: path squares on a card, blocks float above them and slide with a transform. */
+:root {
+  --sl-path: #dfe5ee; --sl-edge: #c9d2df;
+  --sl-b1: #2f5bd3; --sl-b2: #c8492f; --sl-b3: #7a45c4; --sl-b4: #2e8a57; --sl-b5: #b8336f;
+  --sl-b6: #0f7a87; --sl-b7: #b5650f; --sl-b8: #4b5872; --sl-b9: #7d8a12; --sl-b10: #8b4a2b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --sl-path: #283040; --sl-edge: #1d2330; --sl-b1: #4a6fdc; --sl-b2: #d0573c; --sl-b3: #8a58d4; --sl-b4: #2f9a60; --sl-b5: #c8467f; --sl-b6: #16889a; --sl-b7: #c2731b; --sl-b8: #5f6d88; --sl-b9: #84921c; --sl-b10: #9a5634; }
+}
+:root[data-theme="dark"] { --sl-path: #283040; --sl-edge: #1d2330; --sl-b1: #4a6fdc; --sl-b2: #d0573c; --sl-b3: #8a58d4; --sl-b4: #2f9a60; --sl-b5: #c8467f; --sl-b6: #16889a; --sl-b7: #c2731b; --sl-b8: #5f6d88; --sl-b9: #84921c; --sl-b10: #9a5634; }
+#slide-path { gap: 14px; }
+#slide-path .game-head { gap: 8px; }
+.sl-bar { display: flex; gap: 22px; justify-content: center; color: var(--ink-soft); font-weight: 600; }
+.sl-bar b { font-family: var(--font-digit); color: var(--ink); font-size: 1.15rem; font-variant-numeric: tabular-nums; margin-left: 4px; }
+.sl-frame { width: min(100%, 420px); padding: 10px; background: var(--card); border: 1.5px solid var(--rule); border-radius: 18px; }
+.sl-board {
+  --r: 5; --c: 5; position: relative; width: 100%; aspect-ratio: var(--c) / var(--r);
+  touch-action: none; user-select: none; -webkit-user-select: none; container-type: inline-size;
+  transition: opacity .2s;
+}
+.sl-cells { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--c), 1fr); grid-template-rows: repeat(var(--r), 1fr); }
+.sl-cell { margin: 2px; border-radius: 9px; }
+.sl-cell.path { background: var(--sl-path); box-shadow: inset 0 -3px 0 var(--sl-edge); cursor: pointer; }
+.sl-cell.home { position: relative; display: grid; place-items: center; }
+.sl-cell.home::before {
+  content: ""; position: absolute; inset: 14%; border-radius: 7px; border: 2.5px dashed var(--bc);
+}
+.sl-cell.home::after {
+  content: attr(data-n); font-family: var(--font-digit); font-weight: 700; font-size: calc(34cqw / var(--c)); color: var(--bc); opacity: .75;
+}
+.sl-block {
+  position: absolute; left: 0; top: 0; width: calc(100% / var(--c)); height: calc(100% / var(--r));
+  transform: translate(calc(var(--x) * 100%), calc(var(--y) * 100%));
+  padding: calc(8cqw / var(--c)); border: none; background: transparent; cursor: grab; touch-action: none; z-index: 1;
+}
+.sl-block:active { cursor: grabbing; }
+.sl-block[data-b="9"] span { font-size: calc(36cqw / var(--c)); letter-spacing: -0.04em; }
+.sl-count { display: flex; align-items: center; gap: 10px; }
+.sl-count > span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); }
+.sl-count .diff { margin: 0; }
+.sl-count { flex-wrap: wrap; row-gap: 4px; }
+.sl-count > span { min-width: 3.6em; }
+.sl-bar b.sl-mapname { font-family: var(--font-display); font-size: 1rem; }
+.sl-block span {
+  width: 100%; height: 100%; display: grid; place-items: center; border-radius: 9px; background: var(--bc);
+  color: #fff; font-family: var(--font-digit); font-weight: 700; font-size: calc(44cqw / var(--c));
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.22), 0 3px 6px -2px rgba(0,0,0,.3); transition: transform .12s;
+}
+.sl-block:focus { outline: none; }
+.sl-block.sel span, .sl-block:focus-visible span { outline: 3px solid var(--ink); outline-offset: 2px; }
+.sl-block.sel { z-index: 2; }
+.sl-block.home span::after {
+  content: "✓"; position: absolute; top: 18%; right: 20%; font-size: calc(18cqw / var(--c)); line-height: 1; opacity: .9;
+}
+.sl-marks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--c), 1fr); grid-template-rows: repeat(var(--r), 1fr); pointer-events: none; z-index: 3; }
+/* A home square covered by a different block stays visible: a dashed ring in its colour and a number tag. */
+.sl-mark { position: relative; visibility: hidden; }
+.sl-mark.covered { visibility: visible; }
+.sl-mark::before { content: ""; position: absolute; inset: 1px; border-radius: 9px; border: 2.5px dashed var(--bc); }
+.sl-mark::after {
+  content: attr(data-n); position: absolute; top: -4px; left: -4px; min-width: calc(30cqw / var(--c)); height: calc(30cqw / var(--c));
+  padding: 0 2px; display: grid; place-items: center; border-radius: 999px; background: var(--card); border: 2px solid var(--bc);
+  color: var(--bc); font-family: var(--font-digit); font-weight: 700; font-size: calc(17cqw / var(--c)); line-height: 1;
+}
+.sl-block.hint span { animation: sl-pulse 1s ease-in-out infinite; }
+.sl-block.bump span { animation: sl-bump .25s ease-out; }
+.sl-board.win .sl-block span { animation: pop .4s ease-out both; }
+@keyframes sl-pulse { 50% { transform: scale(.88); } }
+@keyframes sl-bump { 30% { transform: scale(.9); } }
+.sl-pad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 48px); gap: 6px; }
+.sl-pad .key { height: auto; font-size: 1.2rem; }
+.sl-pad [data-dir="up"] { grid-column: 2; }
+.sl-pad [data-dir="left"] { grid-column: 1; grid-row: 2; }
+.sl-pad [data-dir="down"] { grid-column: 2; grid-row: 2; }
+.sl-pad [data-dir="right"] { grid-column: 3; grid-row: 2; }
+.sl-pad .key:disabled, .sl-actions .btn:disabled { opacity: .4; cursor: default; }
+.mini .sl-mb { background: var(--sl-b1); border-color: var(--sl-b1); color: #fff; }
+.mini .sl-mp { background: var(--sl-path); border-color: var(--sl-path); }
+.mini .sl-mt { border: 2px dashed var(--sl-b1); color: var(--sl-b1); }
+@media (prefers-reduced-motion: reduce) { .sl-block, .sl-block span { transition: none !important; animation: none !important; } }
+
+/* Level header, stage progress bar and the level picker. */
+.sl-where { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sl-where > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+.sl-crumb { color: var(--ink-soft); font-weight: 600; }
+#slLevelNo { font-weight: 800; }
+.sl-levels-btn { flex: none; padding: 6px 16px; font-size: 0.9rem; }
+.sl-prog { height: 6px; border-radius: 999px; background: var(--rule); overflow: hidden; }
+#slProgFill { height: 100%; width: 0; background: var(--hit); transition: width .3s; }
+.sl-stats { grid-template-columns: repeat(3, 1fr); }
+.sl-picker { width: min(100%, 480px); max-height: 100%; overflow-y: auto; align-items: stretch; text-align: left; gap: 12px; }
+.sl-picker h2 { font-size: 1.6rem; }
+.sl-picker .diff { align-self: flex-start; flex-wrap: wrap; margin: 0; }
+#slPickStage button { min-width: 30px; padding: 6px 7px; font-family: var(--font-digit); }
+.sl-lock { width: 1em; height: 1em; margin-left: 6px; vertical-align: -0.14em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#slPickCh { display: grid; grid-template-columns: repeat(3, 1fr); align-self: stretch; border-radius: 14px; }
+#slPickCh button { display: flex; flex-direction: column; align-items: center; gap: 1px; border-radius: 11px; padding: 6px 4px; white-space: nowrap; }
+#slPickCh button:disabled { cursor: default; opacity: .7; }
+#slPickCh small { font-family: var(--font-digit); font-size: 0.7rem; font-weight: 600; opacity: .8; min-height: 1.1em; display: flex; align-items: center; }
+#slPickCh .sl-lock { margin-left: 0; }
+.sl-pick-note { margin: 0; color: var(--ink-soft); font-size: 0.9rem; }
+.sl-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.sl-lv {
+  aspect-ratio: 1; padding: 0; border-radius: 7px; border: 1.5px solid var(--rule); background: var(--card); color: var(--ink-soft);
+  font-family: var(--font-digit); font-weight: 700; font-size: 0.78rem; cursor: pointer;
+}
+.sl-lv.par { background: var(--hit); border-color: var(--hit); color: var(--on-hit); }
+.sl-lv.done { border-color: var(--hit); color: var(--hit); }
+.sl-lv.open { border-color: var(--accent); color: var(--accent); border-width: 2px; }
+.sl-lv.locked { opacity: .35; border-style: dashed; cursor: default; }
+.sl-lv.here { outline: 2.5px solid var(--ink); outline-offset: 1px; }
+.sl-legend { margin: 0; display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 0.8rem; color: var(--ink-soft); }
+.sl-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1.5px solid; }
+.sl-legend i.par { background: var(--hit); border-color: var(--hit); }
+.sl-legend i.done { border-color: var(--hit); }
+.sl-legend i.open { border-color: var(--accent); border-width: 2px; }
+
 /* ---------- win popup ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
@@ -425,6 +543,12 @@ kbd {
         <h3 data-i18n="m24_name">Make 24</h3>
         <p data-i18n="m24_desc">Combine four numbers with + − × ÷ to hit exactly 24.</p>
         <div class="mini" aria-hidden="true"><span>4</span><span>7</span><span>8</span><span>8</span></div>
+      </button>
+      <button class="game-card" type="button" id="open-slide">
+        <span class="tag live" data-i18n="play">Play</span>
+        <h3 data-i18n="sl_name">Slide Path</h3>
+        <p data-i18n="sl_desc">Slide numbered blocks along the path onto their squares. Two chapters of levels, from 3 blocks up to 10.</p>
+        <div class="mini" aria-hidden="true"><span class="sl-mb">1</span><span class="sl-mp"></span><span class="sl-mp"></span><span class="sl-mt">1</span></div>
       </button>
       <button class="game-card" type="button" disabled>
         <span class="tag" data-i18n="soon">Coming soon</span>
@@ -531,6 +655,58 @@ kbd {
       <div class="stat"><b id="m24-best">–</b><small data-i18n="fastest">Fastest</small></div>
     </div>
   </section>
+  <!-- SLIDE PATH -->
+  <section id="slide-path" class="game" hidden aria-label="Slide Path" data-i18n-aria="sl_name">
+    <div class="game-head">
+      <h2 data-i18n="sl_name">Slide Path</h2>
+      <div class="sl-where">
+        <div><span class="sl-crumb"><span id="slChapter">Chapter 1</span> · <span id="slStage">3 blocks</span></span>
+        <b id="slLevelNo">Level 1 of 100</b></div>
+        <button class="btn ghost sl-levels-btn" type="button" id="slLevels" data-i18n="sl_levels">Levels</button>
+      </div>
+      <div class="sl-prog" id="slProg" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="slProgFill"></div></div>
+      <details class="m24-howto">
+        <summary data-i18n-html="sl_howto_summary">Get every numbered block onto the square with its number.<span>How to play</span></summary>
+        <p data-i18n="sl_howto_p"></p>
+        <p class="keys" data-i18n-html="sl_howto_keys"></p>
+      </details>
+    </div>
+
+    <div class="sl-bar">
+      <span><span data-i18n="sl_moves">Moves</span><b id="slMoves">0</b></span>
+      <span><span data-i18n="sl_par">Par</span><b id="slPar">–</b></span>
+      <span><span data-i18n="sl_map">Map</span><b class="sl-mapname" id="slMapName">–</b></span>
+    </div>
+
+    <div class="sl-frame">
+      <div class="sl-board" id="slBoard" role="group" aria-label="Puzzle board" data-i18n-aria="sl_board">
+        <div class="sl-cells" id="slCells" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="sl-pad" id="slPad" role="group" aria-label="Slide the selected block" data-i18n-aria="sl_pad">
+      <button type="button" class="key" data-dir="up">↑</button>
+      <button type="button" class="key" data-dir="left">←</button>
+      <button type="button" class="key" data-dir="down">↓</button>
+      <button type="button" class="key" data-dir="right">→</button>
+    </div>
+
+    <div class="status" id="slStatus" role="status" aria-live="polite"></div>
+
+    <div class="after sl-actions">
+      <button class="btn ghost" type="button" id="slUndo" data-i18n="sl_undo">Undo</button>
+      <button class="btn ghost" type="button" id="slRestart" data-i18n="sl_restart">Restart</button>
+      <button class="btn ghost" type="button" id="slHint" data-i18n="sl_hint">Hint</button>
+      <button class="btn" type="button" id="slNext" data-i18n="sl_next_level" hidden>Next level</button>
+    </div>
+
+    <small class="stats-label" data-i18n="sl_stats">Slide Path progress</small>
+    <div class="stats sl-stats" aria-label="Slide Path progress" data-i18n-aria="sl_stats">
+      <div class="stat"><b id="sl-solved">0</b><small data-i18n="sl_solved_lv">Levels solved</small></div>
+      <div class="stat"><b id="sl-par">0</b><small data-i18n="at_par">At par</small></div>
+      <div class="stat"><b id="sl-clean">0</b><small data-i18n="sl_no_hints">No hints</small></div>
+    </div>
+  </section>
   </main>
 </div>
 
@@ -551,6 +727,43 @@ kbd {
       <button class="btn" type="button" id="m24WinNext" data-i18n="next_puzzle">Next puzzle</button>
       <button class="btn ghost" type="button" id="m24WinHub" data-i18n="other_games">Other games</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="slOverlay" hidden>
+  <div class="win-card" role="dialog" aria-modal="true" aria-labelledby="slWinTitle">
+    <button class="win-close" type="button" id="slWinClose" aria-label="Close" data-i18n-aria="close">×</button>
+    <span class="eyebrow" id="slWinEyebrow">Level solved</span>
+    <h2 id="slWinTitle">All home!</h2>
+    <p id="slWinMsg"></p>
+    <div class="stats sl-stats" aria-label="Slide Path progress" data-i18n-aria="sl_stats">
+      <div class="stat"><b id="slw-solved">0</b><small data-i18n="sl_solved_lv">Levels solved</small></div>
+      <div class="stat"><b id="slw-par">0</b><small data-i18n="at_par">At par</small></div>
+      <div class="stat"><b id="slw-clean">0</b><small data-i18n="sl_no_hints">No hints</small></div>
+    </div>
+    <div class="after">
+      <button class="btn" type="button" id="slWinNext" data-i18n="sl_next_level">Next level</button>
+      <button class="btn ghost" type="button" id="slWinLevels" data-i18n="sl_levels">Levels</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="slPicker" hidden>
+  <div class="win-card sl-picker" role="dialog" aria-modal="true" aria-labelledby="slPickTitle">
+    <button class="win-close" type="button" id="slPickClose" aria-label="Close" data-i18n-aria="close">×</button>
+    <h2 id="slPickTitle" data-i18n="sl_levels">Levels</h2>
+    <div class="diff" role="radiogroup" id="slPickCh" aria-label="Chapters" data-i18n-aria="sl_chapters"></div>
+    <div class="sl-count">
+      <span data-i18n="sl_blocks" aria-hidden="true">Blocks</span>
+      <div class="diff" role="radiogroup" id="slPickStage" aria-label="Stages" data-i18n-aria="sl_stages"></div>
+    </div>
+    <p class="sl-pick-note" id="slPickNote"></p>
+    <div class="sl-grid" id="slPickGrid"></div>
+    <p class="sl-legend" aria-hidden="true">
+      <span><i class="par"></i><span data-i18n="sl_leg_par">Solved at par</span></span>
+      <span><i class="done"></i><span data-i18n="sl_leg_done">Solved</span></span>
+      <span><i class="open"></i><span data-i18n="sl_leg_open">Next up</span></span>
+    </p>
   </div>
 </div>
 
@@ -575,6 +788,1683 @@ kbd {
   </div>
 </div>
 
+<!-- Slide Path levels, made ahead of time: one per line, in play order (see slLevel for the format). -->
+<script type="text/plain" id="slLevelData">
+m/+jIHV/j:jISD(QD)
+o.+jdHjjf9=E?=K
+r/+jijHV/fhI4/A50+
+m/+W_Hc.j^jIX.LXJM
+o.,GjHggi1=91:;
+r/,bfh.hHjbIF.PFIW
+r/,jic.jjXbI5F-,FE
+m/,X_iQ?f>jIIL3NL-
+o.,jj_bjh1FE1?F
+r/,hjjALHjbIQM+XMQ
+m/,XZjQ/X>jI6E/75/
+o.,ahfjfj>@5;?(
+r/-bfhi;HXjI9>7P>(
+o.-hfjjVjD6JD4>
+m/-X]HR/j8jI:.5+5I
+r/-bfjc/jXbI5:035/
+o.-WjGjjf(5>+8>
+m/-jMHgLi9jIK9;1:;
+o.-TjbjjG-*E2*F
+m/-fMGgDj9jIYJG7BG
+r/.fhcj/jbfIGNSMLJ
+m/.XgGd?j)jIIHGJIS
+o..HjHfi7=95;6D
+r/.hijHg9XjI8LH6O7
+r/.fhcj/XjfIEN0MQ)
+o..AjjHjX65267.
+m/.XcHc/j=jINEDNGW
+o./FjjiHG2*JE.8
+r//bfc?jHXjI6D;0T;
+m//X_Dg@S_iIN-8F-N
+r//hi[HXbjhIX2QO).
+o./GjPjj??/+,1E
+m//T_HW@e-jIIVE1VH
+m//XZHR?f/jI.5W5ED
+o./Gjijbh7AF5A1
+r/0fj^/XbfjIM*.M,)
+r/0hjZHXbfhIEDLHC3
+o.0GXfXjj6:K6IH
+m/0iRHV?j)jIUVSUR+
+r/0jfhig+jjIP?:YQ:
+o.0G7jijeHK:A14
+m/0fNCV?j_iI8S:8.I
+r/1fjijF)jjIDWS4NW
+o.1]jjGjj-3CD,H
+m/1jNDVOX9jI*ST=9I
+m/1jJjg/X=XIG6;(3-
+o.1jfjXXb96(>GD
+r/1jhijG)jjIWCRP5:
+m/1jNDU/j.jIJDK(8X
+o.1fh7jjG=D*71K
+r/2hijE/bfjIL1.2VS
+o.2EijhjGA8D=7B
+m/2jJGh.j1jIIHVI*@
+r/2jfhih+XbIO):BW3
+r/2jijHW)jhI=SM@AM
+o.2ihjbbb)@(@7*
+m/2j^3g@S_jIS1Y98S
+r/2hijHg@fhI*?RM8R
+o.3jFj_jjK@-(0J
+m/3jIHh2j>fI6S*5+(
+r/3fh^jjRbfIX.E>QS
+o.3Xhjfj67:/:;.
+m/3jcGd@X)jIGWIVEB
+r/3jijHW+fhIQ@-)U7
+o.3gjHHbjB1871L
+m/4fN7g?f@fIXUPW6(
+o.4ijHjj7@3*KI:
+m/4XZHRPf9jI3RIH68
+r/4bjhg/HXbIQ=WOKJ
+m/4T_Dh/W@iI/;,/G=
+o.4jgjVjH,.(KHB
+r/4bfh.jHXjIV.JHWD
+m/4jIHU/jBjISOF8XU
+r/5hijHi)XjI*T)QOX
+o.5Hbjbjb6B--5@
+m/5X^HQHX9jIBDU:D/
+o.5H;jHji>9F7;A
+r/5jhij8XbfII6NRP5
+r/5jijHU+jjIA(OKP-
+o.5GPjij@E+;C+>
+m/6jIHd@X1jI.;8KY.
+r/6bfjig+jjI2O95TM
+o.6HXPjXiE):>A7
+m/6jIHh+fNjIV:=L:(
+r/6bfg6jHjbISTDL+0
+o.6jj@XjE8(=:(+
+m/6fNDhOj8jI@8N35-
+r/6jijALbjhI.QT-QP
+o.7ifjTjWGJ3F7:
+m/7jYHV/jIjI).J95F
+m/7X^fg?f9jIN*;*.;
+r/7ji^/XjfhI>REDVF
+o.7iXHjHh1(G.:)
+r/7fji7EXbfI(SBBQY
+m/7X^Dg?jZfI*1U,-R
+o.7YfjjHH8=@IDE
+r/8jfhcLHXjIWXA(Y/
+o.8GXjHhjL7;.FA
+m/8X_HR/jIjI1E(TJ,
+r/8bfhg/jXbIP9WR+2
+m/,WbGg?f9jIS;(.D;E5
+o.,6jhjfH>+IB76=B
+r/,jfhej+XbIBQR7:OW7
+o.,bjjHbG,>H.I>/1
+m/,jJDV?XZjIEB,@EI8G
+r/-jhY@jXbfIPDKE4DXG
+m/-f_DW/j)jI*UL9EYT9
+o.-iXjjia2@*(,:08
+r/-hijd+XjfIQ/0KP02Q
+m/-fNDg@fJjIYB,DTB8K
+o.-ihjjfiBG@,B=:;
+r/-jjY7XjfhIS5->V04H
+m/-fMjh/f9XI5SU)4DY)
+o..@ajjfGAH6=>J:I
+r/.hjjB+XbjI5MIT3MNS
+r/.hjjHV-fhI4=S3=;V2
+o..jjjDGHE/)9C;-)
+m/.XYHVbT-jI>A:*(A7Y
+o..GjPjjjH1@4HJ:+
+m/.XgHQ@X>XI6D0,8D+.
+r/.fhie/jbfI)EFP0KLQ
+r//fjY7jXbfIQS@X@WGX
+o./ihjXj4I7A(7J41
+m//jIHV@f/fI>5)E=.)H
+r//jfhe+HXjI2+TI:-7I
+o./jbjhii,5D(25B+
+m//fNfV@X)jIUI=1E3V1
+m//jZ6f?f-jI-BW;+W8;
+o./GbijbD)K@682H=
+r/0jhijE+jjIPON-PMK/
+r/0bf_/jHXbIBWIYA>VC
+o.0ghjXji./=*/*C1
+m/0XZHS@X9jI5Y3J5KF6
+m/0jRGh.X=jI8->Y0-T7
+o.0fhbjjg1)H3-);@
+r/0bfjc;jXbI(9)W:863
+r/0hij97bjhIQU5VQMDF
+o.0?jbPji1:JA+:B9
+m/1fNDU/jEjI*I9=8N5F
+m/1XaCh@W-jIY8W-.-W8
+r/1fjc@HXbfI(@2./U6C
+o.1XjjhejG14;;71>
+r/1jhi7F7bfIR(?W.7M+
+o.1Ej7jjg609JH=I>
+m/1X_Hc/j*jIWQ,Y/F,X
+r/1jj^/XjfhIX(2JD/4J
+o.2GHjjXiJFE==4J6
+m/2fNDg.j_fI-,W;W;I-
+r/2jh^.jjXbIEX(*SE>1
+o.2jjfbj7E3F5:2JA
+m/2Xb3g.j>fIW/2;+/1.
+r/2hj[/jbfhIMEN)EHT)
+m/2W_DVbW-jI:UE88U3>
+o.2HHjifE0:8+6;)>
+r/3bfji3HXbIHY2?YOR?
+o.3Ghhjhi+,1C.>;:
+m/3XcDh?j)jI=JLDHJW:
+r/3fhcjHRbjIN/@BF1GU
+o.3ijfXDjLF3.3F5,
+m/3X_HS/f9jI1-/S.6/X
+r/3bfg@jHXbIA/2TYC+Q
+o.3GhfjXj?H;K1H>E
+m/4iNfV.X>jIWY3(EVT9
+m/4X^jg;W9jI./5;.KI>
+r/4hijcXbfhIQ86C.;GY
+o.4EjjjhD6CD8C037
+m/4jJGhGX9XI6N5CG:CY
+r/4fhijg+jfIS-;OY4;S
+o.4hj7jjG;73:H*2/
+r/4jfh.hHXbI*SWLO4YS
+o.47jjjaG*>/+K176
+m/5fNDW/X>jI1KRW19KT
+m/5j]Gd.f-jII:D28KE:
+r/5fhje;XbfI(P;L=5,M
+o.5HRjjjH+0;4)-?6
+r/5jijHU@fhIY7XM@C(T
+o.5ihbXjHI85CEC4K
+m/5i_Cj?X=fIB,J.3D,.
+r/5fhiji)jfIE3YT(=:T
+o.6DjXjj7K)L8)6:>
+m/6X^Dh:jZfIS8IGT:N;
+r/6fhij,XbjI?NI-7Q4U
+o.67ejjjjBF50?8E;
+m/6XZHR/f_fI-,5T.7KU
+o.6CjVfjjK4600;F*
+m/6X^Gd;XZjI1R=M1TIU
+r/6bjZ.jHXjIL(XOLHY>
+o.6fHVjji>A6IHIB;
+m/7idGd/j,jID3YPWK5P
+r/7jjYOjjXbIQP0*R(4I
+m/7X_Ch;XJjI,L@.=E3*
+o.7jjHhXG=93AD5A2
+r/7hiZHjbfhI2H(FNFTV
+m/7X_Gd.j1jI+EU7*TG6
+o.7Hhjj;G0)496J3B
+o.7HTijja=>?3)E=>
+r/8bfhej-jbIO4(3JN-3
+m/8X[HV@X9XIK2.+:,.B
+r/8fhjjE-jhIMTNCLQ4M
+r/8hije+XjfI-Y?T+(2M
+r/-hjjHW)jfINE508TE1/@
+m/-jJGh:T5jI7P=U8>O.U7
+o.-5jb@ji*9423*F.D0
+o.-EjjXjSFB39GEB@/A
+m/-W_Gc/f/jI.D;*:5S=8:
+r/.bfdjj1XbI:-4?C9:=?4
+m/.iJHV.X@iI6Q*JW7Y*KP
+o..iXjjWH@.9J2@A81,
+r/.bfhjg1bjI9)BCX-/A4X
+m/.XZDVOj=fI,8+6(HU+>/
+o..HhjjeEJ)@9.J9?E/
+r/.fjig+bjhIH7XN:V0QN2
+m/.X^3h6X>iIJ:VSLD:W@>
+o..XjfibG,.J92K3D-J
+r//hijHi)jjIE9@S7D*8O7
+r//hijE7]fjI)F*+LET8*F
+m//jNGW/i)jIYHJ5)K*I5(
+o./jbPjjE2@93)3=8-.
+r//hiZ@XbfjIV+F)4?2T)-
+m//fN6h/X5iI3TP*K3VWSJ
+o./GDjHj?9D2;K762E5
+r//jijHU9jjI(>;YO=?;O8
+o./WXijj74:1L>7C10K
+m/0jIHR@TZjIX)Y=*M)LV5
+m/0jJGi.f>fIT-;D=T.,=5
+o.0iHgXjD:5EH/:0DF)
+r/0fhi@F7bjIF1IJM?MJKT
+r/0bjhc;jbfIUHP49G3Q-5
+o.067HjjG*EJ+1I*?+>
+m/0X_Cg?fBfIK;6+,W=6K:
+m/0X_DV?TNiI.=LD,1+MD6
+o.0?jajXh25/IL24)7;
+r/1jiZ/XbfjIT4FM.Y4ANL
+m/1X_Tg/e-jIF+>.EI9/;>
+o.1e[jjiH,9/=)JC56)
+r/1fhjjEJjjIC>TL-9=RT;
+r/1fhjd3XbfIES/U=T*@L5
+o.1gfibja6*+@JH/GF>
+m/1X^Gc;fNjI:-VS(5-MU8
+r/1jhic;HXjI-*1LS3W)LX
+m/1X^Gc:f_jI-I+W1+U*-1
+o.2ibbibj3?;4A3:./K
+m/2iJiU@j)jI:R=WY)DIWR
+o.2GjjdWHE;)L+D:/91
+r/2hicHjbfhILG.S-ONR6L
+m/2X^GQbj,jIL.WXBJ6PYA
+o.2Hjhjj;:?-6>2?D>+
+r/2fh^7HXjfIFX50?F=W)7
+r/2jijB+XbjIYJU58I@W4*
+o.2ihRjjG/0EK*)FKC*
+m/3XYGd:X@jI/,E.W6,N=J
+m/3fNHU;WZjIW.F:7W9M(N
+o.3DjjGieE,A4*C6205
+r/3fhjgHLbfIL:*,FG7N;S
+r/3fhjj.7bfI;Y7Q07.:Q?
+o.3Ggije7.4*7LE/86K
+m/3jIHRHT9jI+SKNY+F.D5
+m/3j^GcDT-jIC*XF(E8YF:
+o.3HhF]jj9D1609J./6
+r/4bfjig1jfIL->.:UB/+>
+r/4ji^/jbfhI0(H@KUFCHJ
+o.4Hbj@7G8.532CE@>2
+m/4jIHU/jJjI,YM=F,IR.L
+o.4jjWb_i*H-3.2A876
+r/4jhijE+jfIWO;./CN;8,
+m/4XYHe/X=jI7Y9LKSJ9F,
+r/4bfji2HXbIMV6,::P2-+
+o.4?jgXjjJ>+CFA+>HF
+o.46Djijj=8KL?EC;>8
+o.4TjjXj6*C7-:9>BE:
+m/5j^Ge;T-jI6BI*K68.7P
+m/5jIHg*f_jI7I(UL=8+V>
+o.5@hjPfjLA4F+3FC/,
+r/5hijjV-fhIN;>F*O;T9@
+m/5X_CU@f;fISGE=L>/G=:
+r/5bfgOjHXjI24UCK.3/AI
+r/5bjY?jHjbI)50+T0,1NQ
+o.5FXjXjDI@74*H0?84
+r/5jfhgj9XbIT9(HLL243M
+o.5igiH7CHF*+(5.E/>
+m/6X_CVGX-iI1*LE85IL/=
+m/6XhGR.X>iID/.+3DN5.*
+r/6jhijERbfIQ?PGL34Q8S
+m/6XgDg/e-jII/=P,/+=6U
+m/6iJHUHi)jIU6D7CUJ=X,
+o.6fjjha7=:.>-;)/K6
+r/7hijjN/fhIM(9V:10:/@
+o.77jjfWfE421D025EC
+m/7XZHQ?j:jIQV.S8EQL=8
+r/7fhjc;jXbI)EY(M4M90I
+r/7fhjc;XjfI7RF*/J-M7)
+o.7chVjfG.>J4*)B71.
+m/7jZ6f.X>iIGPKVY+TU(K
+o.7?jjf76D@F+13F1DJ
+m/7fMGhaf9fI>(=Y;S(L-@
+o.7CijGjW.AD>;E07C6
+r/8fhidHRjfI@UM0,0T=/X
+r/8jfg?jHXbIQPR50XO4,7
+m/8XaCh;S>jI52./SBX>/,
+r/8bfjcLHXjI=-R0A8X4/Q
+r/.jijHM@fhIVU.6@T9NQ8*T
+m1.ic=ig-jd/XV/icL?JXCj{;]Xrj
+o/.fHjjhVPjIIUJG-:QUX(C:
+r/.hjZHX_fhI5.MCH/0QM.E/
+o/.;jj]jaj@IJO1YXEC2/9QE
+m1.jc-fVZWhEWg9jc.Zexvz.]Qutz
+o//jijfXf7+(,W0-F7(@0-7A
+m1/jX@jU)fd9fU)jc_:(U{=_)*0s,
+r//hij0XjfhIQD/UA(QD(GJ6
+r//fjijE+jbI25L7.-13O7,Y
+m1/Xg-iQFig-jV1jc{L/Po,U-HPo*
+o//HFhVjjG7(3G+50NB@+=0O
+m1/Wj>ec9Wh-TX>jcptMTyLTksUS9
+r//fjc/jXbfIA0TYFN@0MB>L
+o//RjhjFjXjI7I49K6?I0;K7
+r//jhijF)jjIX80OD*XF0V5(
+o//jHGijbdhIY-R6;HY*;1:F
+m10fh_eV?eh)jc)jc7,K)hHS.g)FH
+m10jT/ig>WV>TV)jcrgcS)Ar]c+.C
+o/0jHTXjXbi(,F+DEKTFC2EI
+r/0jfc/jHXbIXFR2Y@CFQ5VA
+m10fd>fi=Wh1fQ>jc@:bCr)B*b@r(
+o/0hHjhjHii(7QWA9J0H;T94
+r/0hijjV)jjIC+7?4TD0.?4M
+m10Wj>eU=jg/XU>ic(*]Q=:N2]?:j
+o/0ihjFj]fj(;TOF4(=FM94>
+r/0bfhij9XjI6O;>CH>X-?;+
+m10ih>eR?Wj)fh9ic_*Paj:_jPcv,
+o/1XFjPbjfHI>5EVHF/3VMAQ
+r/1bfhiLHXjI.;2W3X,4+A5Q
+m11Xg)jV7jg9XV)XcQMiF(ZTPiFJI
+o/1jfjg@XjF(TJD65UUXD:FG
+r/1jj^.jHjbIH5TJRDX7FJMO
+m11fd9eg.id9eh_jc9eTz;g-eKC;y
+o/17HbjjPdjIU2F3ML*2MSV?
+r/1hijB7bfjIRKO=C+NWM5C+
+r/1jjc/HjbfI0>?,X5.>U3Q)
+o/1b?fbjjj@I5I8/X-4P2/@C
+m11XhRSh=ic9jV>Xc/0{sivQ.Nsiz
+m12Xj>eR4Wh9fg-jcse{TfvuOxUiw
+o/2bHbjXhj-IH>=:JI?>8,)I
+r/2fjc/XbjhIJHE)O?JUG)2H
+r/2jhidHNbfI.(,8RS+W:0QL
+o/2H@hjjPXeI)*AQBLR2AJ4M
+m12jh>TWJjd)jU-icct@R0eXt7@Se
+r/2jjYPjHXbI1APRX(1L:PJ,
+o/2jZHjjXjh(),-/.FCM*EQG
+m12fdMihFeg>eV9Xcs3TbBAH:TbC.
+m12Xg/id>eX9Wg-jcrwXpyjzuMixa
+o/2HjHiVfjf(216KH:F/DKH,
+r/3bfjc3XbjI3,2W6:,.=L93
+o/3GFjjghXHI3P0O=U=R073U
+m13fd9Xi-ih=ehJXcyhl5v?yilLm]
+r/3bjc/jHXbI@R,OCM@Q,XRL
+r/3bfjij-XbI3S,47/27:-3(
+o/3XDhfjhjj(/V,5SPACI4QO
+m13jh/TX>fc8eg9jc@Tw39h@*ADUh
+r/3fjie+bjhIU=RSPXM1QONY
+m13Wh9TV/ThZjR>icFdM03YcfM3=d
+o/3bHffFjhbI2VL=DM2RG;OH
+r/3bfhiLHXjIL>JQ5YL?5UPY
+r/3fhij8XbjIG;4W8>N4B57?
+o/4jDVXGjjbIJ-X9:@J6XP3O
+m14fhMWhBeh>WV>XQa_AS,wa{_rBc
+m14fd5XU>iV1fV>ice9@Sy.v976[/
+o/4GjjW5jXjI73/MK?*3T0P8
+r/4fhiji)jjI>*NUT(17UPN0
+o/4Bijidjhj(GMU/-XU*T8AM
+m14jU@ig>WV/XU)jc_D1Mev^>auei
+m14fd9Xj-fU9ig.jc0_.BNv/_=,Ev
+o/4hDfjjaWj(2K*A/D:B(?)9
+r/4jij=7bfhI1TSR-;10GQ.D
+o/4G/bfbjjj(,FE1I+;FOQA2
+r/5hijC7_jhI(/J54D+6D4CJ
+o/5HHXejhjg(07P9+-32BP8C
+m15fdEfgJjc)jV>iciLrNfzOQ@MfL
+m15Xj-ej=iR-fU9jctSg+f9tCAbw,
+o/5iDXXjHH7I3I,P7>*9@P8R
+r/5jfhc3bfjI:V4RO),L-RHQ
+m15Wh9fc-fj;Xg)jciv_1@WuQU1@c
+o/5jbaifjHXI3OS=/:8OIKQ;
+r/5hicHXbjhI+.EJOA1CNPUG
+r/5jjY7jXbfIG*Q/03TFPQ03
+r/5bjY7HjbfI3C+4J5.R=-FI
+o/5VhXFjjXHIWBVD9*QOIC/A
+m16jd9Wg.jV)ji)jcv.*Bc(vB3.O?
+m16jd_fg-WV9fe)jcyJBabiyJC*Ah
+o/6jjXUjj]HIJ*+UFGC1X>M3
+r/6fjic;jbfI*J:U1()T;I27
+r/6hijHgJfjI0RX25UVMSX4U
+m16ic>jUNjR1jg)jc[s_;9cReg;9j
+o/6Hjj?HfXH(K926MIK194R?
+m16Xg9XV_eQ@iV-jcC_ea?lC]Gw?b
+r/6fjcj3XbfI*.L6C=*@UNCF
+o/6bHdHjXfj(TDR?I,@O=LJ3
+r/6hijjUJjjI0AU4D77)05?/
+m17XgBfh=WU-Wh;jc5M,PvOSM;@v]
+o/7j7j7XHf7IN=+R4O8=IJE7
+r/7jhijERbfI;:(+?M;Q/7-T
+m17XgBXh-jW-jQ)jcSD]FUy65SAUy
+r//jijE+XbjI*EU(LFT,0U)NTS
+m1/jg+ff>Wh,ih-Xc1/y)bPi:*0(bP{
+o//>jjjibXh(DS47RJ6AV671JL
+r//fhjg/XbfI/8R1.PSE*R(,P8
+o//gbjV_jjHI/UJKN4I/FIJ@4G
+m1/XU>ed9Xh/ig?jcTjOXgMdqjT;hVd
+m1/jc9fU-WX_Th>jc/zCn0up/J{n9X?
+o/0bi@jbjih(8E)0I.T@G/8I7T
+r/0hijg+bfjI+8=-KQY269-JWQ
+o/0jHjSajhH(P1KA(O:PBHA0M9
+m10jc9ihgig)XV>fc-(TDlp,/-Ttcp:
+r/0jjY@jbfhI>HY0X;)BSD0O4)
+m10fh9fg>Xg^ic1jcxg5TM0roSZCMAr
+o/0CHfjjfj-I1=FR0)AN=@OE8A
+r/0jhY@jbfhI4GQXJ)(4GRL;,+
+r/0bfjgj9XbIA=X-W37CDR,W3)
+m10jd>fg;WhMfV9fc]Yu+,TSgOu+PKC
+o/06hbjTjjjIVS*?U0MAWNMY7L
+r/0fhijg1XjI@:TVBWX8=MPVTX
+o/1HH7bjjg7IEW,K3/;HO,;:78
+m11ff>XV-jg1ic>jQn[@eNQ3eR@aO?3
+r/1fjijG1bfIT;=2-@5T:DL-73
+o/1H7jijjXH(F07DIVUF2)BPAQ
+m11jc9ih4ij9Wh>fQBnIUXg,BMISNw:
+r/1jijB+bjhI*+XO4UG)UQO4L,
+o/1H@jf_djH(L4,I6R?953G7L?
+m11fdFfh9fV,icBjcn=,()yRnXH3OyS
+m11id>iVFXg)jW)jctU+bfz3jQ*kfzP
+o/17jHD_jbHI6/V0AF;U/Q1AX=
+r/1bjhcLbfjI0UR:OSQ0VY3+MK
+r/1jhYPHXbjI54G@CV(-4TFJV1
+o/2HGGjVXjfI@P21MKNFY/8MIQ
+m12XV-fV_ih9ShMjci_-wGF9g=XwHG9
+r/2jfhig1jfIRQ-?X6YQO;?M/X
+o/2jGjXHehHIBM7/+PCB8U0-@D
+m12Wh>Th-Wgaed>jc5+r=uQhB5r=cFT
+r/2fjigHRbfIP8WF:.2=8XTC:2
+o/2@HifbXHjI-?B+8FA46P=F0A
+m12XhZThATg9Xh-jc,3f=vA1w4eFtA1
+r/2jijHW)jbIM?7AP)X.0)@P;Q
+o/2j@ebhjbj(,S(IG/@3R4;N6@
+m12Wh>Tj5fU>WV-jcDM/y,l@1NA9+l?
+r/2bf_.jHjbIKEX5B3/HEQOC-/
+o/2hGjfPjjGI;-)?67Y5:TA(;D
+m13jh-Xh;Sg?Wh9fctzlTD(cDzVT()j
+r/3jijHU9jjID?5CRAO,>0DU@O
+m13jchjh)jg(Xg9ic9v;a(rCOvVjNr-
+o/3DjcjjjbeIIDP1*0G2AG4)0M
+r/3fhi7h7bfI6D@1JY37/M(JQ4
+o/3bH>jjXiXIME:NI7LAF:WE7I
+m13jf-fU9XV>Wj-jQ3a?j9AO2X?P9.p
+r/3hijB7bfjIFQ1@)X(TD@N0K1
+o/3jHHjfjdc(ETR;27(M?JAN0+
+m13jh>XVBfQ>iUJjc9:HOz3AziHDj3O
+o/3HHhHbjX@IO+2I0J5PXEH0O,
+m13ig^eg9fh-jVBfcL=;Q(cni;bS1xn
+r/4bf_jj-XbI.OJ,AYL,Y53BQM
+o/4jDj@XffH(I5/,VX8E402*GI
+r/4fhijF-bjIB6358-1=>5;?30
+m14Xg@ff>SV>fV-jQ0CQXig+]_QX{Z7
+m14Wj>jc)jg>TVZfcBr/R_Sj0wURi5j
+o/4DDjjbgjjI,:>P@GW4-?B7GP
+r/4jijC+jfhI;G87M=L1O57N.L
+r/4hijg+XbjI80961JX:1250JX
+m14fdBeh>ThYfg-jc;/Axv*tY/C{wsu
+o/4aHfjXdfj(>618;IR9F8G;HO
+r/4hjjHU9jjI(P.+6/T(X;W>4O
+o/4fj[jjFbH(.0F3R=T>)EA;:X
+m14jh-jQ-iUhWV>fcs:Py9)_l@[SU/r
+o/4hHgHXfXHIY(3;EQCX13=6MR
+o/4jHib]V7jIXSWV6*>IL4:67A
+m15Xh9fRBfd8jg5jcvL+ToQ3vHc5oS1
+o/5]HhPjjhj(I-,(KH/@3NHJI7
+r/5jfhi;HXbIPI/7TLBWI)>0:3
+m15Xh@fQ)ig>ehFfcnec-hL0nSl,h9@
+r/5bfhij1jbII=)X.O:B;0I:W3
+m15fd9Sh-XU5XhFjcjlMV?JgplMagCf
+r/5hije+HjbI*2KXVLW10NLQPR
+m15fd-WgZig-XhNjcaCBx>SvaBAcHU_
+o/5HjXjedWb(?A+G2EM3BE@H;S
+r/5hjjC7bfhI-8)X5/3=31RC/.
+o/5jdPjjjViIW>IC;LY8@HCPM:
+m15Xh>TV_Xg>eR5jQ0UDlR3xuSDc=-w
+r/5fjY?jjXbIEO,X(/QIQ4,)0*
+o/5HfPjiXjb(0A:NRQX/4+GVSJ
+o/5HfjDXjfHIU.R8K?IFX@NJ)V
+m15jQ>fRBei>jV9jc*(@A;SO+)7@;lW
+r/6jhic/HjbIS=3:)O1M(,-1O6
+o/6j@bibbj7((W?QO>N9KG=QEU
+m16jd)eh_Xg-fX9XcQOgwkz+PG]fbnR
+r/6fhijENbjIN>*1QWCT)70JR4
+m16ed>ThBTX)jh>icUXRun9dUj@=e9W
+r/6jjZ/jbfhI2NOF.XUQ@GM2EU
+o/6djjjbXiH(G=28)M4F=:6?V0
+r/6hijHU>fjITNRHQ@4MVS7X14
+m17ih9Tj)Xj9TV>ic@,)WjBUAWjVtCZ
+r/7bfjig-jhICA,6.PD952RQP4
+o/765GjjjbjI0PRHV=T?J;AVCF
+m17jd9fg9fV/TV@ic=^](c+eN]H=c^n
+r/7bjhii9XbIX>P-WM+Q7R40T5
+o/0e/bjjjjH(T;XJE3P5VTQJ:,P=
+m10Xh)jU-jVZfi=icU=pR>:Z9U0pQSAwC
+r00bhXDah*HjhgiE0=LXTaUD1=LW]T
+m10je)jg1Wh>fV9jcgUaiA0IfS_VjAL@f
+o/0HDjbjjdj(CH)EI0?-;B+GJ0?:
+r00hjjbh)HbhjES)Na9(C0S:Wa;827
+o/0bHjjehbi(95(6HEWU+469AEVH
+r00ajXDahg0bjgc(iaOj1?e)hiO^9@
+m10XU_id9ih=ih+XcyzjC0X{gcujASOzg
+r01bhj0ajXDahgP(YW8,L=O(ZT84DU
+m11Xg@WhEWh>eR9jcclIXz-T0auIXw*US
+o/1HHbjXjHUIR@8CNJ;APO8;IK4>
+r01ahXHihW)ijUC[bB,DL^D[aBE34e
+o/1HfhhejjbI=+0P6.V-=*/BE-I3
+m11jUFic+ih>XV9Xc{;?ucO+xT;,wfl*_
+r01bhXfaYXDihUX^;U.:),/[=^b;9M
+o/1jjfjjfhRI)(=-:8E++F=4C9HA
+m11jh9jd+fh:Wg-jQy?S^3QiZM,*^cRie
+r01ijXfi[7jijUU;D2?@Zj]3;2@.ZP
+o/1HHjbjPjeIG0*PB69L/@*W:G9N
+m11Wj9fgNWh=WV>jca;jyd:gra2cpd=Ai
+o/1jjjHHiXeIQKICD64>CJFB481?
+m11jU-iVFXV>WU/jcsF0-HIae7Fr+JRa=
+r01ahjfaY/DajgUD7Y?gde^;6YP]Zh
+r01fijj3ijQfighQI08[=K_Rc1;[@)
+o/2HHjihihj(9168CIW5=*714UIJ
+m12jd-fU>ed@fgBic):j0g(S+*=j{S+^/
+o/27BHXjhjj(U0>W85?QU7AONHFQ
+m12jh8Tj/fh9eg=icUgK({A)5KhBjz@5?
+r02fijj07XjijUedI:2jT=[ZK*0aT5
+m12ic9jgJjd-fW>jcj;?:pae,kB5G]pf,
+o/2ajGjijj7(D10+VJCO5G02IQ?H
+r02jjg)fjjKfigG3MiRB6/W4MaZJ*@
+m12Xh-ih^ee>WV9jcQCFiyNg,c_H{yW7,
+o/2jfjjb@fDI7YD6?F>A9J36?NEL
+r02jijXfY;bhjgEYN,8i:9>YN0BW9)
+r02ahXfbYLjahU70jWaAf.79XVi1U.
+o/2HHjjbeHfI>K)DX0F/AK20XO)7
+m12jc9fR_ig/jU>icjMbFSd?^jNcF^g@U
+m12ThBWh=WhBfh9ic9?.gH=FB0-/gw?3B
+o/2bjj@bijb(;?AOW76R4F2NP)7Q
+r02bhj)ihVDbhU)ag@MiL_JOT@AaE]
+r03jijXf[+jhjE4URC*S6f5a]12Y6T
+o/3jiXHHj@jITFG(*4?;T?H42C0P
+m13Xj(Xh-Xj-Xh8fc/uRM{L+F0QUMe?.3
+m13ie>jVMWg9fh-jcaJ7wGe,=b57wFh;>
+r03ijg0fijQfjgiA0f+ERHiK6P*=RG
+o/3GDjhXjjHIY4I3:AUKOCR23AM@
+r03ahjDahX0jhg7jBQ4Phi6]AB4GZa
+o/3_jjHjbXj(L;-F@HWB8A4?@EMB
+m13fh9jU-jW1jg,jcbO_aW[.5hAUbNf.5
+m13icFWV@WU9jg>jc(,vg:e6*)Pvhdy6e
+r03hjG/hjh(jjgMF8aibJ7MG8R^YB6
+o/37jjHbjXFI@K+*E,4Y?JI1@34O
+r03bjj0bhh(hjg4.A2-+6iE.B162,i
+o/37jhjf@hjI5T4*2-A/46CA;-OU
+m13jR>igNjg:fd)jca;=cfwJ7S53DfwB.
+r03ihjDaY/bjjEQ+/a7E6fR3.a?47^
+m13jUVWh9fg9fh=fcj>g?waUNj4*HfbTN
+m14Xg)Xh_Wh>edEiciZgvU@,egZJtSG,z
+o/4jhhfXHXjI1;LMW9)/S;MTJA01
+m14fd?ji)jh9Sg>icM8nVP)yrM7NnX)RL
+o/4hjj_jh]jIBE:78;Y/C08>A3W/
+r04bhXfadX0bhg8j)_BYi1=i:_AcMR
+m14ff-TV>SV>jgNjc9{AZf7cx9pHZt]3w
+o/4HXjjFVjXIJQ=B.0?-IJ7=31G;
+r04bjXD(XXHahU^U3)4jiP]K203U?W
+r04jjF(hjE@jjEK_^D]9)(C_A[ZB15
+o/4jTjjXbHFI7K:N+*X00=3P?)R,
+m14Xg]jQ-jR>jU9jc4CRjsyMP5CPsxyNO
+r04bjg)fjjKfigig.eP^1hWh6ZGg(a
+o/4HjXbjXje(T1.4QB0L7@*3BI1W
+r04fijXe*jXjig1(/952B4)0?17:BV
+o/4jjjjjGiB(05XCP.)UE4XQIM7N
+m14fdZfg_iR>fV-jQtuwrHN@XvbpreM?u
+m14fR>XV-iW-ih;jcAbMy{s.v>VPnql7u
+o/4fjjiDfjGIFB=WE;*)P45CF2)?
+o/47Djjfajj(EJ29SMU,FQ3AWON9
+m14XgBjd)jU9Xj,jc:yF-/z65;gF,/pA?
+m14XgVfh9eh=XU>ic+1SLw]{C41]6ufz7
+o/4jjThjhjH((WC49+/,QIC2A0U*
+r05jijX*5XHihU:*4I17[g96fR)@[U
+o/5HVdijXjHIJ*)K=X0RC-03NX+J
+m15fd@ehATh9XV-jcgM)58AU;dD)S85V=
+r05jjU0fih*fjgEji760FOFZW27EMO
+r05ihjD*5jfahU*=Yj3,NQ)+cX]MjT
+m15jg-iU>eUZjV@XcwOpU)0CcYNyq)9Lv
+o/5jjj@fdiG()H-N;W?.?IOQ;MT0
+r05jjg*fijQjigG,jSJFbAF4USYN_A
+r05hjG)jjF)hjEG7K8_[NLO/EJa[PD
+m15jV>ig)ih4WhBfc{]zV:diOiTx>*d]a
+o/5bXbjjjj?I2BH0YV8:2K@8GIN:
+r05fijMj[jJfigb*_dXFcRaC_dPOYQ
+m15WjBfd)ih-jU-jc?(rtLX@6B3wtiX5A
+o/5HejjXXjD(0*?2OKI-74*2MJPI
+r05ahXDjYXeahU3/jFP4GH,Oa164C;
+r06hjHbJj;bjjE6I?_95.-6fX_)?>H
+o/6HFfjgjjfI=J:C+?>IQ:4C+A?T
+r06hjHZ1jHbjjE]CHVh9I1bCW]^1[)
+m16fd>Wh=XX)fgBjc59*JvCPQ,/=Rv9H5
+m11Xh9ThEShFfc>jcw1*x+BTb@A1Xu,CTbp
+o/1@HhjHjHHIW7G@JQU:PW0O?4QJ:F
+r01jigQfig0jjg:dUJ*^1eO:ZNB2^.eP
+m11jdBfV>fV9fW-jcU95f:-Lgzz95ga@Lsw
+o/1jXjjfdcc(>I9-GS4@8?M:-@U;B8
+r01ahjDOgLHjhgjG0iE;dU]^30WD=cU]
+m11XV-ec>ij?jV9jccud](z+*Vlu]S1z7+X
+o/1_ffjjjHHIDF5TEQI2(?I3WGQN2(
+r01fjjXfY3jijUEUd/e3[FYFUR.T3eG]
+o/1jjhjjTHfI3IBD-T(/52I?C;T7L-
+o/1fHhjjjiTI;DYS>E5OA;BXL>KCHG
+m12jd_fR9fh1XV-jcSx.z5v_ReT{.g5v9fd
+r02fijJfji(jjgG2:^aCb[*G)9^]C_YA
+m12ie>ih-fU;Xh=jceyuDU.B:NgydZUCADN
+o/2Hfjjjj:j(>QL7?U6)NHQLJCN9-G
+r02bhj0?jXDahg4D=JKTdBb,g=IKUZ0X
+r02jjE*jhXDahU(^R,iTJ53(]Y.OLI?+
+m12jh9fh^edBeV>icUp:*tlnZjTp;aX3n[v
+m12ji_Xh,fc>eh9Xc@/ha(gj*M@-hb2]j5D
+o/2iiDhjjjj(,QNEX@A(+)FNKWBCLP
+r02ijg0bhjjbhgLcQ6Uf3I5,cR.U])Q1
+r02bhj,bji(jhgJ0Pi.K)3HBQNa6L14H
+o/2EfjjfjjjI>ON?JK=B*OPU8GR7B*
+m12fd8fhJTh>ig@jcg]U{,=*qXhqSv.:=CX
+m12jV-SV>jV>fUVjcSM]uXot).PN]gcot:X
+r02hjHj)7Hbhjg-Y7e)Q15a7ZF[)R9_b
+o/2H@jjjj7P(J8E6=SOA;J7HL=;V9-
+r02ihXDac7dahg*h.bDXi8O9h/P;7i8G
+o/2HjHjfVHjI59>JAO8G15:?I,V@71
+m12jhJjQ>jU9jg.jc{dRJ@pjA,xdNR3qj*,
+o/2XHjjHhbiILIH6TCB:9MIGF7C:-+
+o/2HjjijPjF(V6+0-MGB4O=908M>3J
+r02jijXfY;Hjhg-H0Wd>TG8+@2iZ>a?9
+r03jjh(jhj0bhgU+4i-P^GhM24i.G]O_
+m13fd_igNjU)jg=jcMnGLeps3?OtGLnpz5(
+r03hjHj)6jjfigR[0U.FhaOR[3M.>Ni_
+o/3TjjjjH_jI*IT@9?B6J1WM6:EA8C
+m13ic>jU>igBXj-fc?LOfu{jNP?CPZc7tNQ
+m13fd-Xg@Wh/WV>jc/yHDz=ajlU_HDu>VjP
+r03jijXfY/HihU4VQWTb>dU6^ZW]i>Qg
+r03ijW+iji(jhg(aYKZ2+7bN][C12+7g
+o/3jFjDjjgj(741CVMLIX?40DTPHBV
+m13Xh;Xg>jQ-ij=fcQ,P(hC1B{S>P1UC:@h
+o/3HHbFjjgjI=IM/,BY31HGM0,BN42
+m13fd=ji>fVNiU-jcd>yrB0CY_Y>Bu@5UXi
+r03ijjf07XfjjU)]0WX5;R=)b2_O5eRK
+o/3HjjXfjbeIS41RT8G?@>-3YFKT0A
+m13jR>ig-Xh-egdjc,(?c;o=mQ5)VXbx3nQ
+r03jijX85jDajU@a:,^*0LX6j27^10aX
+m13XhBjh)Wh@Wg)jchAB0/9*aF^;69/_-ad
+o/3D@jjjjjhIGML?P9D7;JPNF391?=
+o/3ajHfjjjH(P,2:BIU/VW+A2CIG/5
+m13XhhiV9fg-ih,Xc,Dc4A+F5_-3l>7+5:_
+m13Xj)ih=ig9Xh5fcV{3;BwQe0Vd;1BpNQ9
+o/3HHgjHfHjI*G)N/+FD,=G0U62?4:
+o/4jjjjfbHVI6)S@/0G7H65E9Q07:G
+r04fji(hjh)hjE5RAdY[_a]-BLc[R_ad
+o/4jhjHjbTHI?UJ6)V;9LTU573RK9*
+m14jg>ic+ii=ih>fc]*;p07Pd?hU)gS7Pd=
+r04fijXIXjXfigRg6K5O^G>RM>[-Oa@6
+m14ic>fh+jX>Xg8jcKDaZzeW*CfVyQz=X*C
+r04bhj0Pjj,bhgf9F/H=QPZa8V6N=QKd
+m14XhFih8fhJTh9ict>ivn*ahgj>i3t+Ogn
+o/4ifHjj_jjIOB@SA6+;3OCUWA3?G2
+r04ahjCi^7fahUQ)S?Pc/9010TaPQ6dZ
+o/4Hjijjjb]IG*B+REY7CIMH2Q?40C
+r04hjjbI5XDajgQPcj4/h3:RaIX56Z3*
+r04ahjfaY3DbjUZc_/=6H]:ZYX.;Gi^9
+o/4jhjjXjgDILD*9)UO7H,I+A>@O=E
+m14Xh9jVPWU>jU9jcyte:Z@,u+zte>Z]Ay3
+r04ihjDaY3Hjhg^5d;h/+fih5[=V?;]a
+o/4jiijjiff(XH*T+?K4N47,M)?B5N
+o/4iijjjFji(D190M.N8PA12/MBO>8
+r04jjU;ijU)jjE7./H3^_Cfa1,H3_hKe
+o/4XjjjhjjV(4A?KB,J@F4J?P8:KAF
+m15Xh-iU@Xj)jU>jQQX;eLgDyK+W1nTbDpJ
+m15ji9ed>eX>Wh=jcuxM?gL{acaZW?SLpvd
+r05ijXe0jXjijU[3bPM+?V9[3aV1+6b)
+r05jjHZhcH[hjEAIhF9+Z5(B]aN19Z.Y
+o/5HHHjjiX+(K:78+Q)5D>578=P9DM
+m15ih>SV@jQFXV>fcCUeZ*r+dDCU?R=i5[D
+m15Th>jUdjd>fU)jcNfzS]C97GNGz]grX7I
+r05jjg*jhj)bhg.fCJE5XB6.iCIM3?YO
+m15jh/iU>jg)jU5ic,Ovp7twfN,.Pp9NvfR
+o/5XjijjiXG(@V58BR7QF@H*8J;7O/
+r05hjG,hjg:hjEj)cBY6/K-W1[Jd.6L>
+o/5HDjhhjjXI0+4AC=2LO/3CHBQ9FO
+m15Xg>jVFfc_ig(jcF;Y7Z1vJ?OMd7T1vR=
+m15Th>Wh@jU-iUFfc57Ft,*9/?,g=tB?r-H
+r05fijj*6jjfig._Y/dhgbc7^[.RiXaI
+o/5bjiiajjjIIRXQ8MET/IOQ:2M6T0
+m15XU>ih+jg9ih5XcDc?ixzZ,{DlOhzwZ5-
+o/5ijijPjfjIKX0(8?1=JJR07U?G8T
+o/5HGjFXbjj(T1WJC)K4;M1ON;*4-=
+r06fih)fii*jigg*i]Z-ac)h2bZ_-WQ9
+m16ThFfV_Wg>jR)jcHZQce?fJSGcZ1u@f-U
+r06ahXf,VjfahUMSYT6QDX8UQdR6cbO;
+r06ijU3iHgLijU+1Z7f=c02)4d6^BK1+
+m16Xh9eV>Wj-jX9Xck:lsPT9fAl;bWPT9Jd
+r06fijXjY;bhjgZ(7>a1F*BZ16Va24C/
+o/1HjjjH_j?IB;J10HFT4=48J10GE?3;
+o/1Hji_HfjjIVGT7O5B@1/OUT8H,BM16
+r02fjh7fi/XfigRI6ci5=F[1RB6ea2@4S0
+m12fR>Wh>XU-ijNjc(F>Rtxj7QU)3>FkxlpSU
+r02bhj8jhj,bhgcg1)J-i34IQ^cR8-i371
+m12Xh>fd5iV-XUBjc-@gjvy?]159BnjuyAS1,
+m12jR>Wh>fV]Wh>XQR{QnwBh0r,JrRQwBg9_?
+o/2jfjj7fijIT4QLF3+:;DT-PM7+93=K
+r02jjEIijg3ijU6JeLY1M2XE.J[Dd(O2Xe
+m12jR>ih9Tj)ic@jcv.TCbzeDF)t=TAWhwDFH
+o/2jfjPjjjf(FASOJ6X97-FA-HJ7P+94
+r02ijg3ijW(jig26,4.db*cG2O4A6e]*MH
+r02jjHb)5jjbhg8,3*:/QSOf(+;2:VRTag
+r02ahXj,5Xfahg,QR+>IL(^@,SDf>ZM8L@
+o/2HXjhjjbHID2M7.BQUPCC2M14AR@QB
+o/2F7jhjbj7(G@JAOPMDEFG1X:QWLCEM
+o/2bjXhjHbjIRULCX>P,Q-WML;U>RIK-
+o/2hjjhbjiHI:I*WN->0./6:8PN;L-=2
+m13XhFjc)jg>ehYXc>N67;{*emZ5N,6:x=mvZ
+o/3HFjgjijHI*/RCTV73H1*)QCWO:4I1
+m13Wi>jd1jh)jg8jcNStIvP@aRQtSyRzO@iQP
+o/3H7iXiHjjI,MD:WR+?NL3NA:PC17UL
+r03bjg,jigJfigiZ^K6+7bJajZHK.,5EIh
+m13jc-jV>Sg?ij-jcOjSvMx)bpeOkLwM])aAl
+m13ih_fS9jg-jd-jQAi754HUcw{?h/)4RPuw9
+o/3jahjjhjD(I,/OR4PAWT:,/*A5I>PF
+r03ijV+aFXHihU09/Q@*^?373B@Qb1[7+P
+m13ii9fh-jV)XhAjcCPnju{wB2XSRejcon52O
+o/3XjjjjhbG(IC9:-G*PFHB583QLGPFA
+r03ahjDag/Dajg0Q4gjhH@=b0R5ebhP?4a
+r03bhi*bhj,bjgYdVe^h(gjQYJNcja0f_Q
+m13ic>jg-iV>eUbjc>Q+P).J;jO,Z+P)Ag=sa
+r03hjE=jjE*hjgYgC6;-[b7G[gKF;/eW.i
+o/3j7jHjiPHI61;PV*TF79J@=RV1?A69
+m13XV_eQ@XV>fh-jcjf;VUb,HyMyf;trb?QLV
+r03hji/h7EPhjE?A2[K_fYIW6B2SCa[dKO
+m13Xh-jc>jV1XUFic*+j{3A7pu.7Cj_=QJouA
+r03ajXHa^+jbhg>4)_2S0(WY>3)_1a8Rid
+o/3HH7bijHi(1TIN+/J@961TGOBEJVC@
+r03fijjfY3HjhgWfXV1jUQ->U].h1ifY5>
+o/3iDTjjjjb(P)0F:ND2?IQ0/T(ODJMB
+o/3jfH^jjjj(G+R/HJTEO)N3Q/ICMFA0
+o/37jCjbjjHI+-KFHNA3;TP-AFO*N1;U
+r03fijJjig,fjg6PjZ97YGhJ5/fd9-cOMJ
+o/3GjHijhjH(FOVPH0X2*I7MOP9)V:1+
+o/3jHf]]hjjI6I02,:3QOV6J0139@QHT
+m14Xh_jQ9iU@XV-jcyc*@SU/]V+pl3@]L4^V5
+m14fd-XUVjg9XV>jcPVg,c)wz7ANad/l)Uz7@
+m14Xi9ed_eh>XU>jcAX*O/-Zz:rpO5N.-Zt:i
+r04bjjH*5XDihg52OcI>U=T[>2WYZ@=7T^
+r04jhXDYVVDbhUd+(_f=3BOPR-A_U43B7W
+m14fd-XgBjhZWh=XcwT/7Ou:ZldIT/7NxaXYZ
+m14jg>ic5fh8fg5jc7O*:1fNZBhIX7;)obZBh
+o/4fjjjihj7IMPOJ-EBX7.>PN@J)BQ;-
+m14jg+XV>XhBTh=fcZP,M/-Hl:XfO*M-QHu:c
+r04fjjQf[jKfighY6=^PHAcOGZ6=WNP9YM
+r04hjE:jjEKhjEZbO+hBGd)7ZOi2WJ?d15
+m14fj>ig>fR=Wi9jc0vHduNQ,h3/rdXuNR?g2
+m14ii>iU@Xg=Wh9jc)*i/AaDZTr(+S/AM:ZKj
+o/4hjbjjHbbIFQ=1EWBN@*0Q:)9PBM@5
+r04fii,jih,fig*5JC1.IK0F),AC260KdF
+m14jg+jj9Th)Wh>jQa_sA.UX*9ED_jO+/X(B=
+r04hjHbJ7jbhjES.Wef2Vbh5R.W[T2aiM6
+o/4jHfjjXXD(+PK,:;?F>B0PI3B;9L@=
+r04ihjD(WjXjigMO*7ZgG)]RVa*6Z^G0RJ
+o/4h1jjjfjH(O4>N8);VA+=4>FNVCH9?
+r04hjH^Jjj^hjELPHe58.O1*[OGK6:.R0*
+m14jd=ihBXd)jgJjc/_xAedgR.i/Px7mvfH5h
+r04bhiHYVXHihUi>^;ZG@[=JV5]3YG6Z4I
+o/4GihjjjHiIQ9+Y4;GC2ICJ2D5;NGAQ
+r04bhjjbhg)jjU+>;O@a-(6f49EG?iFA.]
+o/4jHhbjdgj(B*36ME,H+P@+C7MG:I2W
+m14Xh9Wj=Xh/XV)jcRiB]01.-ruRrBT/1H3yl
+o/4@Fibjjjj(T,7S:I;1VKT-6F:H;7GJ
+r04fjjX*6jXjigV[NK923WQMV[WZ126XYE
+o/47XjjHjjbIG1K2Q5V0-4F0O1Q4R73C
+m15Xh/Th>fe>eg>jQnRW7c:g+JUATN8b:h+pR
+m15jg>fX;TV>Wg-jc.Oxdwuz+(jAOpdvExL*:
+m15fd)ThbjV-ig=jcnvpKU-GtOSnvyB.,PtN_
+r05hjHjh0HbhjE)bde=2:c6N9aZ[>2=;6W
+o/5XjjFjPjHI8WMU2CO,=B6PMF+JV4;8
+m15Xh-Xg9ffNWg>jcN,@B*yudRnW.H=+SuYTn
+r05jijXfc3XfigaI+.61X0F=aQ06G2_BE4
+o/5jjWjjbf7IEVNMBFC2,?@ONE>7A03)
+m15fh=Xg_fh)jgIjcsxGUa,:c7.jx5>V.:NJ7
+r05ajjD(VjDihUfWN3106(ZG[XL52879ZG
+m15id>fU1jg>WV@jc*t:uejAgxM3t=wdN7g9Z
+r05fjg,fijjfigW>.)*I_YTEXV.13JhZTP
+m15ig@jV-Wg9Xh/jQ@*g_.7F+pL=1r_@8O+fL
+m15Xg-Xh)fV>egHjc(gA?pvb{MNVq7Fxvb@NX
+m15Xi_iR-jg>iV>Wc+9lgJ(.7O2+9li]>7J:(
+r06jhXDaY/jbhg@Pi*1EfY=Z?+S0BDWY;Z
+m16fh>TV>eg9XiZjcngi0rV,3u9vdgQnVf3uh
+m16fh-Th_TV-XUFjcQ=gr/eO*,o@=fziXF3px
+m16Xh_eg>fW=Wh-jc(1]0RrQjvAa1pJ]rRtvB
+m16jU>iV@eR-jU@jcQKf;g7-*_05Jj;nz]*_K
+r06fijMj^jMfigM[FSDBH02aHZ5dFBO01i
+r06jhXDaZ+jhjEYU4_b-Z78,[WDai-]694
+m16jhZfh+XV>fQ>ic*(etK4;V9i4BftA3;V_r
+r06jjE,fjh0fig1c^IPbAZH)1ehLGiJYF)
+m/6i]GV@T>XI(YL@P:
+o.6fiXjbH@42,-:
+r/6hijHMPjhI>@X@)A
+o.6XijjaG@8>E@K
+m/7fNWh@X-iIU6=RGU
+r/7hijHW/jhI1LOTRU
+o.7XfjifH;:5FL(
+r/7jhijG)jjI5SU;CT
+m/7X^HgbS>iI8+16NU
+r/7fj[@HXbfI*?LUC4
+o.8jXhj_j*@>>2?
+m/8fMGj;X9jI18(=BU
+m/8jcGd?j)jI-5SEUI
+o.8iHXjj7+I7J49
+r/8hijjUJbjI.YUPLY
+r/8fjijE+fjI3V6(*8
+m/9jYHV7f-fIS6/KR5
+o.9iihfjhD45I97
+r/9fhij27jfIKSQ*>I
+o.9jFfijjDK?(-3
+m/9fPCh?j)jIS3EUL>
+o.9ijgjje?42*K5
+m/:X^Gc?j_fIM/(K.S
+r/:jijHUJbjIC?UYP9
+o.:ePXjjG*B>14)
+m/:jYHgGf9XIHG.S>W
+r/:fhjd/XbfI*D@.1L
+r/:fhiMHjbfIF5UX0C
+o.;jjWjb608FIA4
+m/;X]Gd/X-jI3WD/KW
+m/;X_Ch/e5jIUH+ST.
+o.;?jjjX.>5,0>5
+r/;hijHg+jjI75LKC4
+r/;jhidHLbfIUF0QXP
+o.;ijjjjC065K=>
+m/=fMGgHf>iIL;SS(*
+r/=bfdi;HXjIR.K5F.
+o.=hjjffiB)06@:
+m/=j^Gc;jZXI)(;=:,
+r/=bfjcLHjbIE+J8LT
+o.=4jHjjH?50C@*
+m/>X_Dj:X9fIE@R;+I
+o.>HGVjjH>7,2HA
+r/>fhig;jbfI4=;(:>
+m/>fNDh/f+jI9E=@WF
+r/>bfjcLHXjIF:,(ES
+o.>jhHH7H?/+.+L
+m/?jIHg]j)jIB=LLUR
+r/?hj[/jXbfICB+2->
+o.?CXbjjD,?B379
+m/?jYjc@T>XIS(9X,L
+r/?fhij8XjfI:-M0>3
+o.?GjHjiP=8GL3@
+m/@fNGUDj-jI5.J17R
+r/@fhidHRbjI7U5;D)
+m/@XgGV@X,jI+JGUWT
+o.@jgjXHH4,>-:B
+m/@X_HRGf)jI:*EVEL
+o.@Ej]jHj;BDK=+
+r/Abfh.jHjbI2SFT03
+m/AjNCVHX-iIS5,@3(
+r/AhiZHjbfhI-XL(+;
+o.ATijfjjBEK-AG
+m/AjIGh?f@XIKX6LE>
+r/Afhijh1bfIS(YYRL
+o.BGjijib)D6BL:
+r/BjhijG)jjI;P(MDN
+o.BGj@fhi27D)J8
+m/BiJGh?f;jIHWQI*S
+r/BjjZ.jjXbI*A>?/H
+o.BejjjXCH0F,AH
+m/BXYGd?X_jIEGW(*/
+m/CXYHg.j_fIGH9X/;
+o.CFhhjij3JKG*)
+r/Cfhjc;XbjI(M)R7X
+m/CXcHg/f-jI/SF+*-
+o.CEjWjXH7614L.
+r/Cjfhig1XjICS)TAY
+r/Djfhig9fjI):HRQ6
+o.DEjjjfVF=*9EJ
+m/DXZGV7X>iIY*7@W.
+o.DGjjDhGA;837A
+r/Dbj^/jHXbIX?W5.(
+m/DjaGc;f-jIG:2WR(
+o.EGVfjhiJ>3FA,
+m/EfNfV?X>iI*WG>LE
+r/EhijjU+jfIW)MSUT
+m/EfN6g.jFjI,DT)(8
+o.EijjjTFC10>C8
+r/Efhjc;XbjI9VELN0
+o.EHjjhhB6+FI3;
+m/FXZHVPX=fI+8W/Y(
+r/FfjYPjXbfI(N*N(G
+o.Ffjj?jGD);*1A
+r/Ffhje;XbfIEP*1?E
+m/FjJGhGf)jIWD:67I
+o.FFjEjji/G2-3F
+m/Gf_eV/j-iI@8::D6
+r/GhijHUNfjI+=OD.7
+r/GjhijE1jfI50LTUS
+m/6X^GgDi9jI>I+.7K-E
+o.6GiiTjG:?+,?2D0
+r/6jjY@HXjfILBRUS?CB
+m/6X^Hc;X;jI.X=8(YL+
+o.63jbjii;3*51B89
+r/7hjjHUJjjI83AD*41@
+r/7jijHUJjjI.;=N@N>U
+o.7jXPfjG4,*7@BK?
+m/7WbGd/j-fI1/*2*3G1
+r/7jjY7XbfjI+RHVO*JH
+m/7f_Gg/e5jI7EIT8)US
+o.76jjjhX=>6?5K=J
+o.8jbjffhG;2H;L-I
+m/8jZGVGX)jI+G/8-8RW
+o.8jjXPii)8I?E/82
+r/8bjhc/XjfI9I3G.ONT
+m/8X^HUPi>iI:A.6-VAN
+r/8bjhc/XbjI(=LJQEXW
+o.8jj@ffGA8*+75.1
+o.8iijBjH147J@/,C
+r/8bfhji-XbI:3?DB9;E
+o.8jWhjjbEB9+1;,E
+o.8WbjDjjL8.*.;E=
+o.8HjHiTj2FE=C/*7
+r/9fhi2HXbjIM,7DF=?G
+m/9fbDV/f-fI9,-(/DI-
+m/9XZHR:j;jI+9G@GUTQ
+m/9X_DV[X-jIW1(J-G9I
+o.9jjjjX.9*E2>=7+
+o.9iiXbiH64/*/?H)
+o.9gfhfjj5(?J4?7)
+o.9ijj/ij?/AD+2)@
+o.:jfjfhH87)472BK
+r/:bjYOjHjbII(0O3B,P
+m/:jNDU/jJjIKTXF5SWE
+r/:bfjej9XbI=:,0MB0;
+o.:HjXZjG/K8,D2;J
+r/:bf_jj-XbI.0?C3M47
+r/:jfhe+jfhI,HLT/NR*
+o.:jjXXPi:+J38H6>
+o.:HbjjWG8KE3JA1+
+o.:XWjHji.DE;>=HB
+o.:.bjjj61;>/@7?8
+o.:@jijjH:51>DK7=
+o.:ijXfhW@3;1J*F(
+m/;fN6gPj-jI-86D,KW*
+m/;iNDX.j-jI9=E.@WK5
+m/;jgGc;f-jIUS7WKUW.
+r/;jjY@jXbfI5NGFP@QX
+r/;fjid+XjfI5)XSUMPO
+o.;jjTgjjB3C02).-
+r/;hije7_fhI*T;+T/F=
+o.;ibjfjTC@/L2E@=
+o.;jfjFfHBE37)*>2
+o.;XjfjhgBHA5C;HD
+m/=XZHc@X^XI(PDF5*(M
+r/=bfhij-XjIVB(6=5.E
+m/=XYHgPf9jIXK+.G,*K
+m/=T_HU/X@iI8R,LKF93
+r/=fj[/XjfhI>2@D8*G-
+o.=GiVfjjH/E6)E1B
+r/=hj[HX]fhI0CQNX@NU
+r/=jijA3jfhI.9LN4M2O
+o.=7Fijjj@,;>K?EA
+r/>jfdi;HXbIBOSIMTIW
+r/>bfjih)bjI,RB47B86
+m/>W_GRHf-jI6I(TU:H.
+m/>fNDg/fBjI,=R5F5IR
+r/>fhig/XbjI>0:31>PL
+o.>GjHUjHA6*2HE6:
+m/?X^iV@T-jIEDU4:>W,
+m/?i_GQ@f5jIKX*S(STE
+m/?fNCVHf-jIP)@,1*(I
+r/?hijHg-jhI-JO/0UMJ
+m/@W_Ch?XFfI58R:W,PB
+r/@hijjUJjfIO9:YU18@
+m/@X^GhHS>iI7C:P.>;8
+r/@fh[jHNjfIS0=B4FEC
+r/@fjijF)jjI6@-1CMF;
+o.@/jHjHi6;:=:CI0
+m/@fN7g7i>iI9FTIC73R
+m/AjQDh*j>jI9>@SE6P>
+m/Aj^Ch?TFiISYKV,K+8
+o.Ajj@ffj5A83AB)2
+m/AX_6g.fFjI(-DGHXW1
+r/AjhijE1XjII7R*7/X;
+r/Bhi^7XbjhI7)GX)SPU
+m/BfMjV@X9XI>EL-BJK5
+r/BjjY@XjfhI@.NUNIJH
+m/BXZDX@X,jI=@8:BS5+
+r/Bbfjc;HXjISM5XLFE2
+r/Bbf^6jjXbI,0DP3LJ+
+m/CjIHX/f-jIHGP*,*-(
+r/CfhjjG)jbIY6:O?0/X
+m/CX^GcHf9jIGVR75;,F
+m/CXYDVbX>fI*>.YNTX*
+r/Djjc.jHjbI>O0ILINB
+m/DfMHVbT>XI.VKWIFW5
+o.EiVjHjiHD>10@1+
+m/EiJGX?j-jI.=H+5PTX
+o.5cjXWjjA7DF003H(C
+o.5iXjjhBB9247AD0HB
+o.5PfHXji>C35/9B27E
+o.5jidfHH*.2@?L6/9D
+o.5hfhXjX3?)5IL*5(-
+m/6jIHU@SFjI)*TS>()+OP
+o.6fDjjh@;32C7@9A=4
+r/6jic7XbfhI>=OUV4J1@N
+m/6XZHQ@f+jI*+KSG-DLE9
+o.6eibhHH,5I4DCJD;7
+r/6fhid3jbfIXINY7N7LW8
+o.6jDjjXe0A>9G507;?
+o.6bbVfjj:,1C3=KLAD
+o.6GjjXbiBA7F1*862.
+m/7X_eV?T-jI,:@D8=8G6.
+o.7gdjjji45;DBD47B8
+r/7bfhjg+jhIT:YUMM3;9K
+r/7fjc/HXjfI4ORI>-RLMI
+o.7fXHijh;C*)-H7D;1
+m/7iJGd7f-jI;.=I3RC;@5
+r/7hijB7jfhIGO0*(UM20N
+o.7jj_j]G*,@.I70.AH
+m/7fNDVOf-jI.95RT@IKU>
+m/7XZDVOX>fIS9,IYL@N-A
+o.7ijfbXeD2I6*HEA59
+r/8bfjc/jbfI5TE08-X;/9
+o.8iijjX^0=A/(E8J>6
+m/8Xb6h.f)jIV,RK-8KW2I
+o.8ajhhbW2,D57I=+45
+r/8fhijg-fjIR?VO-W0-RQ
+m/8TbDU/i9jIUT>2GI2/3N
+o.8HiebjfD-20.04K?B
+r/8fji9HXbfI6)JU21MQC3
+o.8jhjNHG/543I5C9,8
+r/8fjic/jfhI/,0T6U4)D0
+r/8hijg+jfhI;UJVE0FMUN
+r/8jijB+bjhIN@(7U2501G
+o.8jcGjjj+6@;.,/=0F
+r/9bfhij9jbI=SRW:C0:4B
+m/9jYDj*f-jI;H,K=GI)X@
+m/9fNDVPf-fI8YW=K53)DX
+m/9jIGX@f)jI7*KRVU)+.Y
+o.9DbPjHjI84?F9?ID2
+m/9fNGgaf9fI.,KE)LDY*(
+o.9HHViHGE6I14=1B0D
+r/9bjhc/XjfI:R(XS3J:OM
+r/9jijHU+jbIC4*0>@P781
+r/9bjhig-jjI5:BCUJXQ1N
+o.9HHjTjE02:E7*D=:6
+r/9fhcj/XbjI4D=1F30;ME
+o.9fhjjjE6/I?;7)D=5
+o.:H_hjja:9>*B1C:=E
+m/:X[HV?X9fIJ:>8@7>9@U
+m/:fVGU.j>iI=RUN--K=S3
+r/:jijHU+fjI,>=8X08S4W
+o.:ijjHaC06;8=78/>A
+m/:jIHV?j*jI):5KX(J*5+
+r/:hijd+jfhIUM18FEOS@T
+r/:bfje/HXbI(SF;R3/L5W
+r/:hjjHU+jjI-61K@W7)M4
+o.:HeijWH=27+D/;H?E
+o.:WWjjb7;+6IL2;E.?
+r/:fhjc;HXjI3I8/(-3)=6
+o.:DjdhXj=F4CA/K05F
+r/:bfjcLHjbIKPV94PI;45
+r/:fji2HXbfI3)-FP?I0TJ
+m/;jNiU/e-jIWFKV*3P5-7
+m/;X^Gd;XZXI+1W:E76=XF
+m/;XaGQ@j)jIX=EUK86UW:
+m/;i_GQHf)jIG:)6+=U1/E
+o.;7]jjfh;,E2C:>?+=
+o.;fhjWjDHE31/0)8C=
+o.;GhjhjF8;9E0:8=D/
+r/=bfjii)jjI-CN;S=7L9:
+o.=jdbjH70,/CF?D0(J
+m/=j^DW?f)jI-DY51K+)/8
+m/=fNGV.j/iIG5SU(=,LT6
+r/=bf_i3HjbII5TMN74IQ(
+m/=jYHV.j*jI+TK>X=H,@E
+r/=hijjU@fhI-K8C*98K:1
+m/>fUGg?f>iIIWD5>EPHR(
+r/>bfjih)bjI)T9Q4874X:
+m/>fNDg/jIjIXHW=5YGHWJ
+o.>j^7jjj1HE7,;D+A1
+m/>fNDUaf9jIRLE=)DG6)(
+m/>X^CVaX=jI(.WDGG,+JU
+m/>jMDX?X8jI?.DNE@INB9
+m/>j^DU/e/jIP9UK:H1R,9
+r/>hijHg9jjI+7@1O1>6@H
+r/>jiZHPbfhIAL)D40M14,
+m/?jMHU.fFfI6IL5-1L6PX
+r/?jjY@XjfhICT(?H-XGYF
+m/?fNDU/XFXIF81:IO,9F5
+r/?fj^.jHjbI2IM(4MBQ2.
+r/@bjhig1jfIT:LI5QRB32
+m/@fb2h.X>iI@D68-EYGJ3
+m/@iJHdPX,jI6Y*UG@+(TJ
+r/@hj[/jXbfIPR4QJKXQJF
+m/@T_DU/iZjI5NUF9-.D63
+r/AjjYPHjbfIQ0MDBY)T?W
+o/2iEhijijHII>B60GP7BY?U
+o/3G-@jFjjj(J1OL:TJ>BQGM
+o/3FbjjbXbf(>IK8N:QJ1G>:
+o/3/jXjXjfb(8KO7;3368:R,
+o/4j:ejjfjXI@2M?VQ,)-MVX
+r/5jjZ.jjXbI+RKDHXCIG2FQ
+o/5HHii3jFj(NX+7TJPO476C
+r/5jiY@jbfhI@XCG,*M?UV,1
+o/5jF7bj_bj(WFB79JCF38Q6
+r/5hjjB+jfhIV0OEQ2L4*NQ8
+o/5jDijjFai(MB;782I/:>8=
+o/6ibhjjDHHIL/+1)C7);=A9
+m16fd-TV9fU@jX)jcRdU^e._bAVQ?
+m16Xh)Wg=WhJjc_jcse:-n+uw:,.=
+r/6fjc@HXbfI)KWRJT0P-W;?
+o/6j7jhXdjPIH:CVOW1S4OAQ
+m16ThHTV>TV9ig-jQLO3je_9F3VXU
+r/6hijAXjfhIN).9M4/1C0M5
+o/6^jjjfHfbI3LHJWYRN9BW8
+m16fh_eU-jR9iW>icOwt,?7XdjPS1
+o/6DHjHiHjb(RM5-A,P7JDN3
+r/6fhjc;XjfIG9-TIPB94NOQ
+o/7GHTjjH]j(9A>;FXWN12EC
+m17Xg>ed>WU=Xj1jc:1oFikF1jOx]
+r/7fjc7HXbfI4/FDNP3,?=M0
+o/7jGf;jhjHII2@+MAP,M0TB
+r/7hijg7_fhIR-S1U942F0T=
+r/7fj[jHNbfI@Q:;PY>XW4CQ
+m17XU>Wh,Xh5jS9jcea(XwJidkfn-
+o/7Hjjj_GXFI2?83FJ0837MQ
+m17ef>fV>jU)XV/fcAUyxq;@3{_x)
+m17Xh-iQFXV-TV_icw(iLC1m>]_Cc
+o/7@6jjjjHGI7,GLFV;BGJ7P
+r/7jijE3bfhICR-FV,RC5LN4
+m17XgFif9jU-XV)Xc;eE/LUOeNL1x
+r/7jijE+HjbI947Q.,)-4Q5M
+o/7EHjjXaj7IQF:CJ8C?0OQ9
+o/7jfj@ijfWIR5*C;@Q,/MC@
+r/8fh[jjRbfI?D@T();3TF)(
+o/8Djji7GjiI/U936J>O,7HJ
+m18fd9XX9XU-Xh+jcg/lAU]3LuQe.
+o/8jHjbhBXh(FQ1*85FX2/41
+r/8hjjHU@fhIO;T.?5UQH4CD
+r/8jjZ/XbjhIH09JOG?)9QGM
+o/8/HjHiWjHI7J-K68CQB3>8
+m18jc+jU-fX>XU>ic]X_nsMzf_O=W
+o/8jHHRj?jjI1K8Y7E0C3H1P
+r/8fhjd+bjhI@EO.FSOGQ4SU
+r/8bfhi/jXbI;X0G=F=G/QXE
+o/8jjT_XWjjI4G,UC6@+0QN>
+m18ff>fV>eW-iU>jQ05NrFeH@jrNV
+r/8jjY7XbfjI1/=HSF+)T?FN
+m19jh)XU5jR5iU>fc:UPc.L-QO=C_
+m19fdcTh)Xh9jV>Wci3DVM.S4Drj/
+o/9hVjjbdjfI7H4N3)8L:GIP
+r/9hijjW/fhI(96.T=8?04):
+m19fhBjV)fd9TV/jQ)gqi=.?Frx:.
+o/9G7jeXjHj(DIOPWU85PKI)
+r/9fjie/XbfINL6=3;?/1-M;
+o/9DiWdjjHjIQ2EJ1T07J;)O
+r/9hijHh)jjIVWM6O-OYF1U0
+r/9hijjV)jbIL8=)Q90Q=MV:
+o/9jDgWjij7I0+NOQJ/C=Q?N
+r/9hijc3bfjI:5MCGX04M*O1
+r/9jhi7F7bfI30J5XL4)CSQ?
+r/:jh^/jbfhI@J7.HBNKG0RM
+m1:fd9Sj=Th5Th>icE5RjMV:5]MXD
+o/:@D7jihjj(RI,HJ?P39:7T
+m1:fd>TX9WV_Wg=jc0,aLn](?aUCy
+o/:HF/GjjjjIWPQ/3*IPW*,0
+m1:Xj+Xg9fV>eU>ica+RU-*X-Rzt+
+m1:XW@iR-ig>fh)Xcs>7f8Zb2?J8h
+r/:hijjU-fjI0C=:79)JWM7;
+r/:jh^jHRbfI4/F=7MQ0?14M
+m1:fh=ig)jcPjU)jcu(b>YUxYw>Pd
+o/:hjihViXj(P>07/HCV+0OP
+m1:ic9fh-ihBTV;fc_Ls+BM.AM(*i
+r/:jijHUJbjI*;/4W@0;,8X7
+m1:ic>fU5jhZfR-ic?zLD5u7r_I5T
+r/:bf_ij-XjI3?;RM>2J43EL
+o/;jFjhiH]hI:KTBM)8;U+T*
+m1;fd>TV)jV/iU/jcx]7brU(t73^i
+m1;ih>eV9fcNjV1Xc13]7Y{gFe7y;
+m1;Xg@fR8jg9ef-jc(+ZatP;@QFkS
+o/;jj_VjjiFI5GAO-2IM,N:9
+o/;iHefjXjbIDNQAL1F;:MJ1
+r/;jijA/bfjIR0;W6F;),TRM
+r/;hij7W/fjI01JTWA79=TQ1
+m1;Xh=jd9eg=efJjcSHULrxHZ5.yk
+r/=jjY@XbfjI(V*RHM3Q(1F5
+m1=jg9fV.Wg>WVZjct?ZVA;a9v+n;
+m1=Xj-ec9jVNSh9jcX,7l=v?n7w+j
+m1=Xg^id9jg)jV+XcywR+V.Swf:?y
+m1=fd:Th9fX-Xh)jcaxeWuSzfNWv]
+r/>bf_ij1jbIF2;45)7;24-P
+m1>Xh9Th,WgFXX-fc0_z[PkJ_xkft
+m1>icZfVNWU>iV>jc{n*]SigU*J@0
+m1?ic_XV9Xh/fU9icDCn(A?D9u5in
+r/?bfc6jjXbI>L,JHWH/3SJP
+m1?Xi=fdJfV>iU-jceb]g+/paR]A/
+o/1D?hjXhjj(@T5=*>:T74;1?9
+o/1H6hfjjhiILK;6,7)SI;7-T0
+o/1ZhbjFjXj(OV15B@0H:14D?/
+o/2jHhGDijjIMWO+2;SN7X+9=V
+o/2bHj_Xjib()F:M0H80F,SGIN
+r/3hijHh/fhI1;Q@0CS1DR8/?B
+r/3bf_i3HjbIJ>?T;XCR)>0;CM
+r/3fhjc3HjbI5O0W9/*3O:I;1/
+o/5XGjHjfjV(CS5,0@95CKHF+7
+m15XV-Th>ighWh)fcS_O3eFjTxF*:=N
+r/5hi^HPjfhIUX4/?H=GJ50IXD
+o/5@jjjej7bI6EA8LJV)B73LQH
+r/6hijjQ@fhI.H?Q=VRRH0C4NK
+o/67XXjXijGIC9=AIUGCDPH?8:
+m16jd,Wh;fg-XV@fcie3fO+A]d=fR7_
+m16fdZfg>eV5jV9ic)geULi:4]X_Lr;
+r/6hijjU9jjIT>-0*1NM)=/1:?
+o/6HhhjjHf7(@/,IA5*I?:A450
+o/6G7jj_Xj7(P>4VK*N2A;V>G1
+r/6jijALHjbIMS6TN=)TEPNR40
+o/6@GfbjjHjIR9KF>OVOHPFAD)
+o/6jf_TjjfHIJOL)F2/KGN@34U
+r/6bjhij9XbI,ODW1?X24BX0>:
+m17ihFfc;jV)Xg)jc;:0=ze_)+U;7eg
+m17fd9XU-jX>eg@fcn*PhbDtx?MqN:t
+o/7HHejjLfj(L1TK+G3N)6K,0;
+r/7fh[j/jbfI,DQ@01>,QRF/)M
+r/7jjY?jHXjIEO2*JI,FQ*0H53
+m17ic9fh)fg@iVFic]uTbM:aTd]u;bc
+r/7bjdij1XbI)Q6OX;3/3>:O=4
+o/7HHXhjH3h(JE*639H3FD78RK
+m17id>WX-jgYfd9jcRAl9QneC7l/YZJ
+r/7hijHg9jbIP-NCRH8X594QO7
+o/77fijGihH(+:K,C@?34CD5/@
+m17fd9iX-fh:fh-XcXVFe(ZS3M;fNJA
+m17ie>ig-Xh5fR>ic.]leQ)p]Tlg[;9
+o/7jXfjHGHi(,8=;:HTP2C5DQT
+m17ff=Sh;fV9fh>icig=cvn5zK)Ftl5
+o/7GGjj5HjH(DXV8WIM;MH81P7
+r/7bfjig+jfI4N3LQM/3M,X:P0
+r/7bfjc;XbjI97TLI)5:4FTQ02
+o/7jbj3j_jiI3N=A4BU)2/A84G
+o/7HHX_jXX5I+QC>G)M29JL80F
+o/7H@XXjjFDI=)O3?RPO3NA?JX
+r/7jfhig1bjI(7>6*+;)06I4:C
+r/8hjjE3bfhIJ18>C.4=/1>53K
+m18ehFTV)jg=eh@Xc/1)i]jF/bM=Ss*
+r/8bjYPHXbjI@F3(1W-FM2)CX-
+o/8jj7CjfiHI=DMQV?,KIG7M/1
+m18Xhdfc9jR9fg=jchQ.t;u9e3=t1HU
+r/8hijd7bfhI10S7)=R0;M*/8Q
+m18fh9WhVjU>WV-Xc-0]pv=awpARlra
+r/8fhiji+bfIY?R01LD46;(@T8
+o/8iChjjXXiIAWU/:9L0VF*:P/
+m18jh5jT9Sh>fU-jQueS,16Lu=T+@96
+o/8fXbjHhg7((9@?4;D92;C4OF
+m18jR@ehZXU-Wh=jc)G7R*5-?=)R;G3
+o/8jHHhhiFiIPCD/JG;G/C31OB
+r/8fhjc/jXbI83HYD:M04OTQ5E
+o/8/bjXj_iH(7VOM6,=FC7O@2=
+r/8hijHh)jjISP7M;=-TW?9204
+r/8bfje+HXjI+/-X;P0E03R4P?
+o/8hfjjj]eH(9FG27H0>9N4AC/
+r/8fhi@G7jfINKCPS53/IJK145
+o/83iHHjbjHIU*OQ=F6N7PD,R9
+m18ih>fU>iXNTU9jcL?DWH]y9@HYx]U
+m19ic>Wh/jU>XV1jc)Pi+/=J(>i*J5Q
+m19Xg-fd9Xg?iVFXcgvQ1LUAoxv1BgH
+r/9bfhe;jXbI9Q;(RP+B4,7RQ:
+m19fdZSh9ji-iR>jc]Ryg.-LC-p].?_
+m19fd>eVFeU>fV_icz9J{tv)fHICmQ)
+o/9jhXb]hjf(H69F4E8Q:A@IN0
+r/9bjhii+XbIV:OL,3XP=W6:14
+o/9H7XbijVj(U1:CR9@7)PO32A
+r/9hij@U@fjI1*;TM9.81WMH75
+m19ic>egFjV)fVFicSNPD5eXRX7N5ol
+o/9djhHjjhGI?FMH03-?1GC*04
+m19jc)jh=WX-jUNjcyexu](OWdmDb,H
+r/9hjZHXbfhIN3LAGJ)?4LNOK0
+r/9bfjcLbfjIM0-3X8(M25AR40
+r/9hijjW)bjIDQ80U)5:X;9T7=
+r/9bj^/HjbfI4?1-3QF1/-4?QM
+m19Xh)jg=eh9fWBjcOykJ=NbjznJ/Xc
+m1:ic>fVNWh9fX>XcOSMeyc*G{afDk*
+m1:jf,Wg@eg>ig-jc)VC+Srg3VL,J>h
+m1:jj,ih)jd+XV-ic1_ztidc2FitXzy
+m1:jh)fUFig*jh-fc-wg)tDb/h3,Haf
+r/:jf^/HXjfIX?(OJ5NXF5QC0?
+r/:jijB+jfhIV@,M0;RRN1M*@Q
+m1:Wj>TV@Xg9iU-jcb1{=7Q+b2@OJRK
+m1:Wh;ed^ih9jh)XccC/byg:Pz9bfh3
+o/:jhThj@jX(1HN/+FECNP)+L-
+m1:fd=Wh;ig-jgZicL7hOm*5Lfb?v>7
+r/:bjhig9fjIQ/:B64N40;3?-R
+m1:fd9Th)ih>XVVjQiL-3orPZ5i3j{N
+m1:XhBfR_XV-Wg9jcrRGF(]drQ6P;.n
+o/:EHjjjh^jIPB02ML=P32@BM7
+r/;hjjALjXbI/8Q5M341/Q2L8*
+o/;jTfifHbjIPLJVBMX2FT;BLR
+m1=jgNfR9eh@TV-jcjlT^ec-TFN_Za-
+o/5bHHjjHXD(+=C?>/:7@;JB6?7(
+o/5jjjjDjHP(28W;6>+0-*8;:N)?
+r05hjHZh[HjhjETP3_iNGaR@2b_PGj
+r05figXfi:7jig^,QY?b46^5:d6aH7
+o/5hXjijhXb(3?*PE>6F;:9WGT7I
+o/5WjjjjdjdIG1AE7QY/829?HN:0
+r05bjj8bhh(bjgHR(YcD_.GA4Z_Nh6
+o/5jf]FjjbjIU02HFX8I-);ATJNL
+o/5hfHjFfjjIX)V-9/>LQGOKC0/M
+o/5bjjjfjVg(CJK;4PE2?HA@;3F0
+o/5j77ijjiXI1U?H3BS-0F7B2C>P
+r06jigXfi0Xfig65:?hj2G75dGX_)b
+o/6bGjfHjfGIDIHEO-F9QBOLN+9;
+m16fd9WhFWgEXV>fc:f-)VjMpD,.)aeV]
+o/6hbjjbHj>I:8H2Y5=K;FA:OIDY
+r06jjU)ahXjahUc-Z.DBRfU-IGLWXD
+m16XgNjc-jU1fh>XccL.(lzg>b?7Jwyp4
+o/6HfHjhXXjIACORQ-5K3CVQO>@9
+m16fd>jV5iU>WV/Xcr_c?v9w=]il/wU@=
+r06ijjfijUIfjgY7^5Ea+fZ6e1Bi;3
+o/6hCjjbjhG((5K4MRN7@DJ-F5N9
+m16jgZiR>Th:jg)jcywc-J9rixuF)AJzZ
+o/6jFjfdjXhIOV4BC)P38P(A:0B3
+r06hjjb07jXfigP805Z;?CVK:4R*6Z
+r06hjHjh^+DjhU>Y:?j98d?1>@W;da
+o/6DjSjjhjX(HOWA,)JSON3PR1AM
+o/6jfjiVXj@I36DQG*.494CM/+Q-
+m16XX-ih9Ti>id9iclz0Ud2r]lyeSc;{i
+o/67XhbfjjjINJ29QIE+UHIQXCF2
+r06fijXK6jXfjg0bO?8Nh[1VO6IdRe
+m16jh)jU@XV)Wg;jcUR{aHtr:KHuM?j_;
+o/6j?ijjij5IDONR4,FY?QVOD,BA
+m16XhFed@Xg,ig9fchr0?6uAbgr6,7bSd
+o/6hjHjbjeG(8-F>*T)A7.QE9NJL
+r06jhjHI7XDbhU1*63_bZRZ*75^aQY
+o/6Hjj7jjj9(=*H8M5D+P1QFMH?K
+r06bjXDahU*fjgg.IZW4BhhG1Za3Ad
+r06fijX:7jXfig,[dJYbVX5RJBd_MW
+o/6j@jjj_bj(TV-793,NNVB>@:4L
+r06ijXji[+jfigaW3UZX1bWY3_[10U
+o/6HHbdgibj(HT9CW:SDHV2=Q9)A
+o/6@7XjWjjjI12;OXNJE:?,OQLD;
+o/6Hjjbbaj/I61GQOJ2,G0AXPR2:
+o/6ijbHjDiH(N/OD?ICMU*P8EH@F
+o/6XjHjjBjFI2QT=MH*@QXU7FI0*
+o/6jib]jjjVIAKVCEYIR09O@BQJP
+o/6jjHH]ejH(5F>;K,.6=98;O2,F
+o/7H@jX7jjH(F2M?:D3UG)W?9J,T
+r07hjE@jj9/hjEd)2afNK(R0*_[bF2
+r07bjXD,5XfbhUaR-=W.,YWT24X6DZ
+o/7jXh_jjXfIP:+6JEHCR:,*;HP.
+m17fj;Sh>Wg>ig)jcMrd?ZOHLMuaSdQ.h
+r07ajXHahU0jjgP]>6837^HEG79264
+o/7jjjiihf](*6HJACEX19GBC70W
+o/7cibjjj@jIG=5PE8W09A;X7CQ0
+r07jii*fih)fig2hGP4_g-*a?65^_4
+m17ji-id>WVNfU-jcArp20/XvBwf1iePj
+m17Xg8ehFfV-fd@ic1,h+nqeJ1Qf5tgiR
+r07jhjH95jHbhgc45I=6J89,4R57Z)
+m17jg-iU>eX>iW>jQN_:70d>,A_=.-bX;
+r07hjHjhjE)jigZicg_9OK^Peid962
+m17jc-fV;jh/XU9fcX:0x@_PAfNTx?zH@
+m17fd;ji)fd>ig)jc*.t/b8r0(?j-e/uS
+r07fijKf^jMjig_/:[(OGF^5Za1G.M
+o/7@jfhjjfh(=:T+)M@N;B630MJ:
+r07jii(fjjKfigOIAF.86*OQeK4,71
+r07ahjfah+HbhgHi.64VQ_.a7@5^R4
+r07ihjDaZ+DjhU[AE5L.63[1,?a@.5
+r07bhi*bhj*jhg5D?)[j846Ga1Z^J,
+r07hjHj85XfbhU:-5MY*XJ*6:BZ2X0
+o/7hjjHfbaH(4?61=F5;31B)4F.7
+r07ajXHahV+ijU]7a^4DO3J6bB1EPA
+m17jh)Tj9XU>WV_fcLa9pQ{3O]a/HBZ*=
+r08hjG/h7gPhjE]0dNLKW*Z)dX]MVC
+m18ii>eVZjg>XV)fc]aL+tS{d,PCRj]Tu
+m18ThEXg5ic9fh>Xc=57hxLZ65-BfnyZJ
+m18WjFiU>eV>fU>jQ9L>1c0HSCr7+bJH3
+m18jc5jh)TU>fhYjc(R=mbh{?7QFvb-n=
+m18Xh-jc)jg)XgVjce1vas/Opp1dvP+Vg
+r08ahXf,FXDajgf.4Y6L@3U@3Z6gW4
+m18Xg=eh/iVFiV)jcltxL+MQjFlKB+PMw
+m18igFeh_WV)jc>jQXL_)BCs+XU=*C6t5
+m18jW>eV>eU_Wh-jc*SV;5DZQJ]a25NdZ
+m18XgFed>XV9ei>ichg{(rveApzLFZunB
+m18fd=fiJXg>Xh9fc,zjcL5(x7wMazr)e
+m18jhFfV^Wg-XU)jcHy_S=P{3;uiT,Aw3
+r08jjF,hjEIjjge.a_SL19i6[cdK1I
+m18ic@WV>XV-XV@icD,izPCSLD+z/RUHq
+r08hjg)ajjDahUHMAiLR)ObMZNJY1@
+m18fh>TVBjg;Wg=icS_cCMP35^LcN=R)d
+r08jjXfI7jbhjEZM4)WO,VZj31hW[X
+r09fijMf[jMfjg_1>BPEOfM)59H>Ef
+m19ff8fh-iV;fV-jcw2sj3/cZxsvZO/)f
+m19jc^ef>fh9XV-icpOiTfHZ(zEi7p?HS
+m19jd9jhNWV=ecZjcM.)>9OvJM9-GJVmS
+r09hjHjhY/jfige;WcAai7Z>S_2Wa6
+m19Xg:ed@fV9ih-jc:vrLXh*FFlU8NhHe
+m19Xg>eh9TV;jg5jQZU0rS?+xHX9UZB+o
+r09ajXDbYLDajgG6T^EX3B@/M]3Y89
+m1:fh>Xh-TXZSg>icA_J0DQuO7_S5tWY:
+o/4fPijjijHIU@AONR:*?MHNP2Q;)?
+o/4jjXWjjfGI8=7U0?*-T:D7G/M12Y
+r04ahXDiYXdijg8ba;ARE]O9ai3CZM]@
+o/4j7jjjHXD(:)O2A>QF63?A1B0Q6;
+o/4HX7jXjjjIM;PSGA7W:MRN;@>*P9
+o/4j;ejjjXj(H-4V?+XU=HCJOF4Q/*
+o/5HjfhbhjHI-E@*:Q4N1-JM19Q;EH
+r05bjXD,5XfahgcY-/(],aRYR6,2^;aL
+o/5H7jXXjjX(WNO16SQ3GP7F19?=,@
+m15jd9fVNjU>XVNic0Rrs3@tj:-MrV=@de;
+o/5HdjjjjTj(H7?.*OK@,B*S;ROF@6
+o/5Xjijjjie(*A70CM4F6K.H7;M+E6
+r05jigIfijKfjg2RF57[-_*YJF,.Z6hK
+o/5HHifjfhi(4+7ISNKAF42/V@7KHM
+o/5HhijhijHI4B5KH;*M--?3DJUGR5
+r05jhjHbY;bhjgg.d56Db+FS.]46?V>h
+r05jjU3ijV(jjU,^*ZKG3])L_DZCH0f2
+o/5jbjjXbfbI@-JX7.F?D?)KJ7XSF3
+o/5jiifjHjF(81V2HUE/720H+IUQ)B
+o/5fHjjffHFI)@83TY0I*/5A3GX?F1
+o/5XHjGjjXjI2T+ILF=RUGM2I>7;VQ
+o/57HjjHHWjI>CP0/3TQEEC:H8,OQV
+o/57jjbjXbH(4?JU9:GNDCGJV73F1B
+o/5XjDbfjjj(-JFQBXTG.H9FCAQMV3
+o/5fjbXjjbf(LC:X?3.0(MJ:RTP-10
+o/5DajjjjjbI?GOQLBVWE?@AJGCPW:
+o/5HHjHbbXjIP*3MXH91/WM,LQA7@0
+o/5DjHfjjjFI6OL1B50-T7AN9C56-F
+o/5jjiejbjFIGO;D6=7+XNO4QM;72D
+o/5Hiijjj@HI=0-D6PBE8=A*C0P?H7
+o/5XHgjFjjH(LC6UGH/Q:PJ7>GO-W;
+o/5fjTfjjfHIRUW.IAT)*QOV42AM0?
+o/5j6jbjjDjI>TKEGVOJB@OQT1A2HC
+r06ajjDac+Hbjg(BEhV9T7_dA=^a9g2b
+o/6ZbjhjjjjIJ6WMIODA9R6PMH@C9K
+r06ijjf(FjDajU.RWQJ;NibPdWRQ3UNa
+r06ijULijU2ijgb/cB[@YfEj7hJdHB]L
+m16Xg9jg>XV_fU;fcuaQXxsw{ftYHXxVn9J
+r06ihXDb^+HihU.J;EBRdGgFJ;19[Q.^
+r06ijXei[7fjjUO.b:/W06Gj/a:.i4bP
+r06jjh(jjE@hjEh-DOLNb4*W6KOVhP,*
+m16Xh_ed9Xh1Th>ice*?O=v5,iu4Q[cj+5e
+m16Xh>Wh)jh1XgJjcdCtum9yr5mAtxv5PN>
+r06jjU3ijU0fjgJMUHdcL0*BDLGaeJ+)
+m16fh_fV>SV>TVFiclzycvQAf/uSLcnQ@o3
+m16Xi@Xh)fg8ih9jcylO0Zgj>hlc>LZhD8z
+r06fijjf^jJfigNi8[c_5>bFi9YR^-?_
+r06hjEPjjG(bjgh5F>QBbG.f>?@QJaOG
+r06ahXDic7BihgY@;1X70P.[H=1hG0T7
+o/6HiHjjj@HIFAG+N-1=70BF1U-G;8
+r06ahXf,jXDbhU=P_4UMTOYDPb;_f^OZ
+r06jjE8ijW+jjU3*XJ7Y,]/;+WB6_1]5
+o/6HijjjH@j(@?:LDN7R0,6QL5UBI)
+o/6hjhjjiX7I5F@AD1RUQ3ECG@*QVH
+o/6HfjH7jhj(3>J?UWV=/,F;7PIO=H
+r06bhj)j_j*bhgBd)^ai-G4QZ9gWa,O.
+o/6hjjWjjPjI2>D7L9CIP2>J+M(A9X
+r07ahXDjZ7BihUA49DcX7i3F38TZ=6b;
+m17jU@Wh-fT>jU-jcAp5RCd)jy7R5Z9f)Lp
+m17XhCfd>Sh>Wh-jc{aFVQZ+.5Ov3V8Z5/+
+r07bhj0jhh)bhg5ZAE9/=Ga,1OD86=Gi
+r07ihXCbhW+ijU=a]D1;[+6BbfO0Ed46
+r07ahjfaY3Xjig8Aec_ZSQ]9;Reb[Zc^
+r07jjW+ahXDajUP?T01bdOf?HT6+aRG]
+r07bjg)bjj8bhg],QOG)Kc@h4RMO.KQG
+m17Wh>ed9ihbTV-jciMSCFL:TBrNUBlS;]7
+r07figMfjh)fig.a6F51H^e6i4M>1GhY
+r07hjg@gHE@hjE6jXeCWAc*6a?cLOJd2
+m17Xg-jR-XVFXV_fcaXl*pr(Q@aum+=C1dS
+r07ahWHah+fahg>4LZiU;6g6+LYWh=70
+m17je=Xh9fi>jR-jQ2MUyW5/Z,)DpvVT/u?
+r07bjh*ahXHahUR3WQd?MXLQ,^Jd?LWD
+m17jc>je@jU)jV>WcSl+@Aj{KV;l+>.dBJn
+r07ahjf,7XDbhU6,PT0f_=46;a8)^_01
+r07bjg)fih*jigW1,26ZAi3O(@).dRa4
+m17Xh=ic@eV>jgNjQX53N1_xH.c,3X1KQ?J
+r07jjW+ijQ3ijU.]fZO6)AE7][da?1Me
+r07ihjDaYXBajUU*Ei5(4.Pf8Da69;HO
+r07fih)fjgQfig/ih^A-1O56a^iS-1G/
+m17jhFWV>eQ>XhJjc{H>J)d.wCLh?J+f>w/
+m18Xg-Xh>eU@iX9jcOnjZ>L(rV=ZrQHLN]c
+m18jc@ih?Sh>fd,jct-FDM]bACxKlFMgb0S
+m18jh-Xh9fV_WU5jQL7Qiau:=v7.giDjQ>v
+m18Xg3jR-ih-jg9jc(nS=Ux+.J;n]?Tx*,c
+m18ThFSj>Wg>jd9iclt_3b7wr:cv73M6lA:
+m18jg-Wh;fgBih=fc1gbOujFKR1pdFtbZLK
+m18ih>TUJjg_ih=XcNR+CYvgpLMO+LZvph]
+m18fh>jg>WV5WU5jcw_9SLeyc]uzA7UOx-[
+m18Xh8Th-jdbiV)jcv1QbDSgBTv1ljMXJ_^
+m18fd_jg-jU-jcYjc)/_>O;,7C)B_4PN7J>
+m18jh5jg?XR-fU9jcOHBn_+@*DH?Jn_*]31
+r08hjE:jjEIjig_S;]?Z.L)ac;^ed6K)
+m19fd-jV/jh.XU9jcQ/zac)wXePRzaf=ncd
+m19jd>fg^ed8fh5jc?+MtDOrZz5=Dt;vhGz
+m19jh/fc-jVFed=fcAt/Bwh?a3Bt3/_8@n=
+m19XgZjd=ShNXV>jc/>=4ygjT@/?n;Bfjxr
+m19jd;ih>TV>Wi)jcuc;DL>F.Vy>atL:d.j
+m1:ig_iX9Xh9Wg>fcsrVLp/X.RadRhpCP/U
+m1:jd)Xh9iV-fi_icQF>gti3U.OHQvnhBU.
+m1:jgZedFjg9jU)jc{CvZf-t1_wJuRfFZ19
+o/0HXjaXjijI,E;7C-HDFN3FJ7Q4HKGU
+o/0@BjHjjjHIC46J,P0/QH457J3O/>Q9
+o/0H6bHHjjH(F8H7W@4,NIM9O)B?4,LJ
+o/0g?HjjjjbIOTK2Y1QF7CLSJ2R1PT?;
+o/0HHHijXXb(5*0?F>X:J3=,)7F?XIKB
+o/0HjjjjfbZ(G:0?I6-74HG;0MH84?C9
+o/0jhjGibjj(=80/HQ97TE;7)1GQO6ME
+o/0jjbjTjPHI8UJE4?Q,PM9U-F57R3QM
+o/0jjHhjffFIFH1:KT(7N-MG3IKV,0O-
+o/0jDjHXiij(>MT70K/@PW6N?8)E(@IW
+o/0GjiHjHj@I;1,NF83ARI;8*LE@3OPB
+o/0XjjHjXhg(T?0K24>FIOMC7I24B?PN
+o/0j7jXjjj>INM*E@CH7Q8PM1GNJI7X9
+o/0ihjjbjj;I8FT4NDAW;Q:7M4RKAX=J
+o/1HHHjjdfj(LWGMCO0*12SW@M;NE183
+o/1jHjbfjXF(,8IP*351O?4GIR1:20Q?
+o/3j@HjjabjI,*(CNKMX@UA23CGJNQ8U
+m13jQ-ii_jR-fh>jQub9pn.lMehlb9xt,XEgi
+o/4hHjjbjDH(A-L?;2(K4024:?;K/H=1
+o/4jfbjiXjF(O0+AK(2X-;V92AK03Q5I
+o/4H@jjGj@jIRCV@12;ND+QXV>4?@NC2
+o/4jjhWjjj7I>D0BW9M41P?O0:Q9)-2I
+o/4HHjfhTijILOXN0P?FV@SMVU03BGW4
+o/4GjjijFij(MWP53;C>200M64,QX?1/
+o/4jjhj7jj;(D?3L=OT,:)J?:@;PE,97
+r04jijX(XjDahUN*62K]-jc=N170K^6aQ5
+o/47HijbPjjIDM2OJ3/7Q8BN0VK3TFQ7
+o/4j/hhjjjjI2BMR9FP;QC2UTQBOM4PC
+o/4FjjjjVjgI0EC*Y?MR826>;1YBLPN4
+r05ijW)ajjDahUYWK1E@aTRfZOU)]@a^JM
+r05jjEIfigJjigji5IGdP],_ha5BOdEZ2^
+o/5iHjHHHhj(IL/NK57WJ2CM0BJ,?WD1
+r05jigXfi27figbF6^E71IG:a/F_56)BG:
+r05hjg,jii,fig+d1>*jJi6/3Z*N(iB^56
+r05ahjfI5XHajU:]Id/4U;9,8gJZ6;U,14
+r05ahjfa^+bjjEG^Dha1?i@QHd4]_06b@R
+r05bjXB8hXDajUP^fT68be0LO]LT.1aB2M
+m15Xg-Xh+fR@jV>ic.@lCNSstO+.?X7(itlN+
+r05bhXDajV*bhg^(Z+-J?IHg^BcE,;6JGg
+m15ff9XhBeh=XV-jcfrt5@:cxeSfrx-AMdN?p
+r05hjHZ9jH[jjET0@hbS28Z3S2@O]R;9d+
+r05hjjb(VXfbhU?J4-G_1*2QOR5@a^123S
+o/5Hj_jjj>j(NI0GE4:FWSNB0J+539P7
+o/5jjGXjjVjIX0V372HO-)XMP)L?AV-7
+o/5DGijbjhj(>D2?,KN@04?K1A5GUB04
+o/5jjj^@jjjIQMGO(>PV1+PLUO+>NK02
+o/5hjfbjXbH(03@1DKNB69)2?(CRLA/9
+r06jijXe*jXfig[YZ_=a92MOdZ[^*b9AOa
+m16WhFSh>jV1Wh=jcFaNLw_dcnQCaNUnicue=
+m16jcBjh.fU9jg-jcKgv/Cxp;b(Jhb/Fwy;d,
+m16fV_fg9fR>XV5jcQNDBUyw*-.RuMCUZw;?A
+r06bhjHIFXfahg7QSW5Ya81=60UH5Zb1R4
+r06ahjDOgLHjhggZa8H[i.)U^dbR@aW?0;
+m16Xj>Tg)jd>fj)XcQXu5+MrT7.Zyf5+kSRA7
+r06jijQf[jJfig/:NYi_b7P[,9HYOh_5NZ
+r06ijU3ahTDbjUa6RB)dDLQYb7YJ)_LUIZ
+m16Xj9Xh>WhBed-jQeT/{w9O3-??T.Bw{P1+2
+r06jjgIijXfjjUPSOC^2+5[ZPKO2_14+Z]
+r06bhXDi^7fijUgdJC48i=^9dRJA49O,]0
+r06ijXjijU)jjg>@[ieG3YEPD?afZH3^Bi
+r06ajjDaY/jijUd.9Z/38S;1Z@8RP39a=(
+r06ihXDbZ+Dihgab,8[ZX)9+ib;9[YW1)7
+r06jih7cWh7fighG96J>YN)C_GB7Y5RV1J
+r06ijXji[+jhjE_*UCH>2dSji*b[6>:ZTV
+r06figXji:7fig2Z7@dK5YXD)d.6ZC5YaG
+r06fih7cGh7jig[cZR(da9iBdZb]1^W9aJ
+r06ahWHag3jahU0Rd?QAWS+,1gI?RJaV,=
+r06fjg,jjG)hjEi)Y._4b6C>b1[/i5O7K>
+r06ijXf0jXdjjU7X[O^f.=?H.iZG_]/1?P
+r06ahXHi^+jfigY1RE8gWZa3Y01=J_a[iC
+r06jhXD(FXfahg;SJ0Y7QW=9/TS1Z6IW3*
+m17XhZidFfg)fV>ic.TzNb9V3Sv=SzMl/bOBv
+m17jU-jU/jV-ihNXc;y]?deX7(J?h]@xdX)=L
+r07jigJfih,fig:[MB+.)EJ@BZOR1,)Vd.
+m17id=ehBTh-jU_jcIeDVbB(tX55n;MaBOtcf
+m17Xi>jR>Tj9fV-jQFy1xp;5:l-Xx;vR?5Ol/
+r07jjXfI7jXfig0.1O?4aI)Y231W7:iL)Z
+m17Xg/je)jU>jh8jcM+gQanZNOEN+]QhwnEP;
+m17jc-jVJfU>if>jcbU7GS*{pvrk+7>R)lpb_
+m17Xj>Wg5fV9eg>jcL_5=/gIROw7U?05hJINZ
+r07jjEMhjEKhjEGfCNF6+SJba[I6G.+CAh
+m17jhBXV>fd-WUFjQ5u9,6M/c?TRur?,.CFTU
+m18WhFjg-igBXh(jcVgTdOQ3w1luTS[AP3wMe
+m18fdNWgFWh-fV>jcrzgA9)LPx>lBfCJ)iPD3
+m18ii>jVBXV>iU)jcH@D+dyM5x>dI*5XyMHvZ
+m18fd>Th@Sh>WV5jcXg5*{(9w=AQgT3K)_wO@
+m18jg9jR@jU9XV/icjU9Or.R?PejrKNz9@-PR
+m18fh/fV9Wg?jV>fczV^HA*:cxnza^ceM;f]p
+m18jdJjR9ig=ij>XcrN/zk?(heviNCzbZ.]jp
+m18jh8ed_TVBfh>jQMr:/-HFJsGVr;0.GjJ[b
+m19ih9fdhiU-ig>fcnjiasNbxLtz3gcaHnhLs
+m19jh-ih-TV;eh_XQr1^shnB=_X{1Lar_B39F
+m19Xh8Xj)Xi>Wh>jQd1n/WD5B*-l1Q0Ve+B,.
+m19Xh1XV9jQ@jh-ic6PLS@Fhj]z.FLQ>,Hjzh
+m19jh@jc)jg=ShBfctu@Plx*38cOa;Btx3@/l
+m19Th9Xi_jc)Xh>ic:H/fE-5Dj.(5Rf:/-Gj_
+m1:jh_XU-jQNih9fc>jr-L_c5Rx5y_-0Cb3Rr
+m1:jh_jR-ih)TU@icJ4O5Xt9iP*J3v4Xq?CQF
+m1:fh>jU)id@eg;jcjt31]hi/vDXs3)_];/u>
+m1:jg>jV)Th?WhJjc=Xz>Zx,R@7lmzFRx59=A
+</script>
+<script type="text/plain" id="slEngine">
+// Slide Path solver: exact shortest solutions, used for hints and dead-end checks. Runs in a Web Worker
+// (or on the page if workers are unavailable), so it must not touch the page.
+const SL_D = [[0, -1, 'up'], [0, 1, 'down'], [-1, 0, 'left'], [1, 0, 'right']];
+function slKeyFn(pz, k) {
+  const N = pz.r * pz.c;
+  if (Math.pow(N, k) < 2 ** 52) return ps => { let v = 0; for (let i = 0; i < ps.length; i++) v = v * N + ps[i]; return v; };
+  return ps => String.fromCharCode.apply(null, ps);
+}
+function slFree(pz, ps, x, y) {
+  if (x < 0 || y < 0 || x >= pz.c || y >= pz.r) return false;
+  const n = y * pz.c + x;
+  if (!pz.cells[n]) return false;
+  for (let i = 0; i < ps.length; i++) if (ps[i] === n) return false;
+  return true;
+}
+function slNext(pz, ps, out) {
+  for (let b = 0; b < ps.length; b++) {
+    const x0 = ps[b] % pz.c, y0 = (ps[b] / pz.c) | 0;
+    for (const [dx, dy, name] of SL_D) {
+      let x = x0, y = y0;
+      while (slFree(pz, ps, x + dx, y + dy)) { x += dx; y += dy; }
+      if (x === x0 && y === y0) continue;
+      const np = ps.slice(); np[b] = y * pz.c + x; out.push([np, b, name]);
+    }
+  }
+}
+function slPrev(pz, ps, out) {
+  for (let b = 0; b < ps.length; b++) {
+    const x0 = ps[b] % pz.c, y0 = (ps[b] / pz.c) | 0;
+    for (const [dx, dy, name] of SL_D) {
+      if (slFree(pz, ps, x0 + dx, y0 + dy)) continue; // it can only have stopped here if something is in the way
+      let x = x0 - dx, y = y0 - dy;
+      while (slFree(pz, ps, x, y)) { const np = ps.slice(); np[b] = y * pz.c + x; out.push([np, b, name]); x -= dx; y -= dy; }
+    }
+  }
+}
+function slSolveExact(pz, start, cap) {
+  const key = slKeyFn(pz, start.length), sk = key(start), gk = key(pz.targets);
+  if (sk === gk) return [];
+  const A = new Map([[sk, { d: 0 }]]), Z = new Map([[gk, { d: 0 }]]);
+  let fa = [start], fz = [pz.targets.slice()];
+  const out = [];
+  while (fa.length && fz.length) {
+    if (A.size + Z.size > cap) return false;
+    const fw = fa.length <= fz.length, front = fw ? fa : fz, mine = fw ? A : Z, other = fw ? Z : A;
+    const next = []; let best = null, bestLen = Infinity;
+    for (const ps of front) {
+      const pk = key(ps), pd = mine.get(pk).d;
+      out.length = 0; (fw ? slNext : slPrev)(pz, ps, out);
+      for (const [np, b, d] of out) {
+        const k = key(np);
+        if (mine.has(k)) continue;
+        mine.set(k, { d: pd + 1, p: pk, b, d2: d });
+        next.push(np);
+        if (other.has(k) && pd + 1 + other.get(k).d < bestLen) { bestLen = pd + 1 + other.get(k).d; best = k; }
+      }
+    }
+    if (fw) fa = next; else fz = next;
+    if (best !== null) {
+      const moves = []; let cur = best, s;
+      while ((s = A.get(cur)) && s.p !== undefined) { moves.unshift({ b: s.b, d: s.d2 }); cur = s.p; }
+      cur = best;
+      while ((s = Z.get(cur)) && s.p !== undefined) { moves.push({ b: s.b, d: s.d2 }); cur = s.p; }
+      return moves;
+    }
+  }
+  return null;
+}
+function slHintFrom(pz, pos, cap = 1500000) {
+  const sol = slSolveExact(pz, pos, cap);
+  return sol === false ? false : sol === null ? null : sol[0] || null;
+}
+</script>
 <script>
 (function () {
   /* ---------- storage helpers (never required) ---------- */
@@ -672,7 +2562,54 @@ kbd {
       shown_msg: 'Solved with the answer showing, so this one does not count. Try the next one on your own.',
       solved_in: c => `Solved in ${c}.`, fastest_yet: ' That is your fastest yet.', in_row: n => ` ${n} in a row.`,
       solved_status: e => `Solved: ${e} = 24`, made24: s => `Made 24 · ${s}`,
-      new_range: r => `New puzzle with numbers from 1 to ${r}.`, next_puzzle: 'Next puzzle'
+      new_range: r => `New puzzle with numbers from 1 to ${r}.`, next_puzzle: 'Next puzzle',
+      sl_name: 'Slide Path', 
+      tag_sl: 'Blocks slide until something stops them. Plan the stops.',
+      sl_howto_summary: 'Get every numbered block onto the square with its number.<span>How to play</span>',
+      
+      sl_howto_keys: 'Swipe a block, or tap it and use the arrows. Keyboard: <kbd>1</kbd>–<kbd>9</kbd> pick a block (<kbd>0</kbd> for 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> slide it, <kbd>Backspace</kbd> undoes.',
+      sl_moves: 'Moves', sl_par: 'Par', sl_board: 'Puzzle board', sl_pad: 'Slide the selected block',
+      dir_up: 'up', dir_down: 'down', dir_left: 'left', dir_right: 'right',
+      sl_dir_btn: d => `Slide ${d}`,
+      sl_block: (n, r, c, tr, tc, home, sel) => `Block ${n}, row ${r}, column ${c}` + (home ? ', on its square' : `. Its square: row ${tr}, column ${tc}`) + (sel ? ', selected' : ''),
+      sl_picked: n => `Block ${n} picked. Slide it with the arrows.`,
+      sl_stuck: (n, d) => `Block ${n} cannot slide ${d}.`,
+      sl_slid: (n, d, home) => `Block ${n} slid ${d}` + (home ? ' and is on its square.' : '.'),
+      sl_undo: 'Undo', sl_restart: 'Restart', sl_hint: 'Hint',
+      
+      sl_dead: 'There is no way to finish from here. Undo or restart.',
+       at_par: 'At par',
+      sl_cheers: ['All home!', 'Perfect fit!', 'Path cleared!', 'Right in place!'],
+      
+      sl_win_par: n => `${n} moves, right on par.`,
+      sl_win_over: (n, p) => `${n} moves. Par is ${p}, so there is a shorter way.`,
+      
+      sl_solved_status: n => `Solved in ${n} move${S(n, 's')}.`,
+       sl_restarted: 'Back to the start.',
+        
+       sl_thinking: 'Looking for the best move…', 
+      sl_too_big: 'Too many possibilities to check from here. Undo a few moves or restart, then ask again.',
+      
+      sl_map: 'Map',   map_maze: 'Maze', map_open: 'Open', map_rooms: 'Rooms',
+      sl_desc: 'Slide numbered blocks along the path onto their squares. Two chapters of levels, from 3 blocks up to 10.',
+      sl_howto_p: 'Pick a block, then slide it up, down, left or right. It keeps going until it reaches the end of the path or bumps into another block, so it can only stop where something stops it. Use the other blocks as stoppers. Par is the fewest moves the level can be solved in. Solve a level to unlock the next. Each stage has 100 levels and adds a block, starting easy and getting harder. Chapter 2 runs from 3 to 10 blocks again, harder.',
+      sl_chapter: n => `Chapter ${n}`, sl_stage: k => `${k} blocks`, sl_level_of: (i, n) => `Level ${i} of ${n}`,
+      sl_levels: 'Levels', sl_soon: 'Soon', sl_ch_progress: (n, t) => `${n} of ${t} levels solved`, sl_chapters: 'Chapters', sl_stages: 'Stages', sl_blocks: 'Blocks',
+      sl_stage_progress: (n, t) => `${n} of ${t} levels solved in this stage`,
+      sl_stage_note: k => `${k} blocks · 100 levels, easiest first`,
+      sl_level_btn: (i, st) => `Level ${i}` + ({ par: ', solved at par', done: ', solved', open: ', next up', locked: ', locked' })[st],
+      sl_leg_par: 'Solved at par', sl_leg_done: 'Solved', sl_leg_open: 'Next up',
+      sl_locked_chapter: n => `Finish Chapter ${n} to unlock`,
+      sl_next_level: 'Next level',
+      sl_new_stage: (k, ch) => `New stage: ${k} blocks${ch > 1 ? `, Chapter ${ch}` : ''}. It starts easy and gets harder.`,
+      sl_replay: 'You have solved this level. Play it again any time.', sl_best: b => ` Your best: ${b} moves.`,
+      sl_stage_done: (k, nk) => ` That completes the ${k}-block stage. Next up: ${nk} blocks.`,
+      sl_chapter_done: n => ` Chapter ${n} complete! Chapter ${n + 1} is unlocked.`,
+      sl_all_done: ' You have solved every level.',
+      sl_eyebrow: (ch, k, i) => `Chapter ${ch} · ${k} blocks · Level ${i}`,
+      sl_hinted_msg: 'Solved with a hint. The next level is unlocked, but this one does not count toward at par.',
+      sl_hint_msg: (n, d) => `Try sliding block ${n} ${d}. Levels solved with a hint do not count toward at par.`,
+      sl_stats: 'Slide Path progress', sl_solved_lv: 'Levels solved', sl_no_hints: 'No hints'
     },
     es: {
       lang_label: 'Idioma', skip: 'Saltar a los juegos',
@@ -759,7 +2696,54 @@ kbd {
       shown_msg: 'Resuelto con la solución a la vista, así que este no cuenta. Prueba el siguiente por tu cuenta.',
       solved_in: c => `Resuelto en ${c}.`, fastest_yet: ' Es tu mejor tiempo.', in_row: n => ` ${n} seguidos.`,
       solved_status: e => `Resuelto: ${e} = 24`, made24: s => `24 conseguido · ${s}`,
-      new_range: r => `Nuevo puzle con números del 1 al ${r}.`, next_puzzle: 'Siguiente puzle'
+      new_range: r => `Nuevo puzle con números del 1 al ${r}.`, next_puzzle: 'Siguiente puzle',
+      sl_name: 'Desliza al sitio', 
+      tag_sl: 'Los bloques se deslizan hasta chocar. Planea dónde paran.',
+      sl_howto_summary: 'Lleva cada bloque numerado a la casilla con su número.<span>Cómo se juega</span>',
+      
+      sl_howto_keys: 'Desliza un bloque con el dedo, o tócalo y usa las flechas. Teclado: <kbd>1</kbd>–<kbd>9</kbd> eligen un bloque (<kbd>0</kbd> para el 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> lo deslizan, <kbd>Retroceso</kbd> deshace.',
+      sl_moves: 'Movimientos', sl_par: 'Par', sl_board: 'Tablero', sl_pad: 'Deslizar el bloque elegido',
+      dir_up: 'hacia arriba', dir_down: 'hacia abajo', dir_left: 'a la izquierda', dir_right: 'a la derecha',
+      sl_dir_btn: d => `Deslizar ${d}`,
+      sl_block: (n, r, c, tr, tc, home, sel) => `Bloque ${n}, fila ${r}, columna ${c}` + (home ? ', en su casilla' : `. Su casilla: fila ${tr}, columna ${tc}`) + (sel ? ', elegido' : ''),
+      sl_picked: n => `Bloque ${n} elegido. Deslízalo con las flechas.`,
+      sl_stuck: (n, d) => `El bloque ${n} no puede deslizarse ${d}.`,
+      sl_slid: (n, d, home) => `El bloque ${n} se deslizó ${d}` + (home ? ' y está en su casilla.' : '.'),
+      sl_undo: 'Deshacer', sl_restart: 'Reiniciar', sl_hint: 'Pista',
+      
+      sl_dead: 'Desde aquí no se puede terminar. Deshaz o reinicia.',
+       at_par: 'En par',
+      sl_cheers: ['¡Todos en su sitio!', '¡Encaje perfecto!', '¡Camino despejado!', '¡Justo ahí!'],
+      
+      sl_win_par: n => `${n} movimientos, justo en par.`,
+      sl_win_over: (n, p) => `${n} movimientos. El par es ${p}, así que hay un camino más corto.`,
+      
+      sl_solved_status: n => `Resuelto en ${n} movimiento${S(n, 's')}.`,
+       sl_restarted: 'De vuelta al inicio.',
+        
+       sl_thinking: 'Buscando el mejor movimiento…', 
+      sl_too_big: 'Hay demasiadas posibilidades desde aquí. Deshaz unos movimientos o reinicia y vuelve a pedirla.',
+      
+      sl_map: 'Mapa',   map_maze: 'Laberinto', map_open: 'Abierto', map_rooms: 'Salas',
+      sl_desc: 'Desliza los bloques numerados por el camino hasta sus casillas. Dos capítulos de niveles, de 3 a 10 bloques.',
+      sl_howto_p: 'Elige un bloque y deslízalo hacia arriba, abajo, la izquierda o la derecha. Sigue hasta el final del camino o hasta chocar con otro bloque, así que solo se detiene donde algo lo frena. Usa los otros bloques como topes. El par es el mínimo de movimientos con que se puede resolver el nivel. Resuelve un nivel para desbloquear el siguiente. Cada etapa tiene 100 niveles y añade un bloque: empieza fácil y se va complicando. El capítulo 2 recorre de nuevo de 3 a 10 bloques, más difícil.',
+      sl_chapter: n => `Capítulo ${n}`, sl_stage: k => `${k} bloques`, sl_level_of: (i, n) => `Nivel ${i} de ${n}`,
+      sl_levels: 'Niveles', sl_soon: 'Pronto', sl_ch_progress: (n, t) => `${n} de ${t} niveles resueltos`, sl_chapters: 'Capítulos', sl_stages: 'Etapas', sl_blocks: 'Bloques',
+      sl_stage_progress: (n, t) => `${n} de ${t} niveles resueltos en esta etapa`,
+      sl_stage_note: k => `${k} bloques · 100 niveles, del más fácil al más difícil`,
+      sl_level_btn: (i, st) => `Nivel ${i}` + ({ par: ', resuelto en par', done: ', resuelto', open: ', el siguiente', locked: ', bloqueado' })[st],
+      sl_leg_par: 'Resuelto en par', sl_leg_done: 'Resuelto', sl_leg_open: 'El siguiente',
+      sl_locked_chapter: n => `Termina el capítulo ${n} para desbloquearlo`,
+      sl_next_level: 'Siguiente nivel',
+      sl_new_stage: (k, ch) => `Nueva etapa: ${k} bloques${ch > 1 ? `, capítulo ${ch}` : ''}. Empieza fácil y se va complicando.`,
+      sl_replay: 'Ya resolviste este nivel. Puedes jugarlo de nuevo cuando quieras.', sl_best: b => ` Tu mejor marca: ${b} movimientos.`,
+      sl_stage_done: (k, nk) => ` Has completado la etapa de ${k} bloques. Ahora: ${nk} bloques.`,
+      sl_chapter_done: n => ` ¡Capítulo ${n} completado! El capítulo ${n + 1} está desbloqueado.`,
+      sl_all_done: ' Has resuelto todos los niveles.',
+      sl_eyebrow: (ch, k, i) => `Capítulo ${ch} · ${k} bloques · Nivel ${i}`,
+      sl_hinted_msg: 'Resuelto con pista. El siguiente nivel está desbloqueado, pero este no cuenta para el par.',
+      sl_hint_msg: (n, d) => `Prueba a deslizar el bloque ${n} ${d}. Los niveles resueltos con pista no cuentan para el par.`,
+      sl_stats: 'Progreso en Desliza al sitio', sl_solved_lv: 'Niveles resueltos', sl_no_hints: 'Sin pistas'
     },
     fr: {
       lang_label: 'Langue', skip: 'Aller aux jeux',
@@ -847,7 +2831,54 @@ kbd {
       shown_msg: 'Résolu avec la solution affichée, donc celui-ci ne compte pas. Essayez le suivant par vous-même.',
       solved_in: c => `Résolu en ${c}.`, fastest_yet: ' C’est votre meilleur temps.', in_row: n => ` ${n} d’affilée.`,
       solved_status: e => `Résolu : ${e} = 24`, made24: s => `24 obtenu · ${s}`,
-      new_range: r => `Nouveau tirage avec des nombres de 1 à ${r}.`, next_puzzle: 'Tirage suivant'
+      new_range: r => `Nouveau tirage avec des nombres de 1 à ${r}.`, next_puzzle: 'Tirage suivant',
+      sl_name: 'Glisse et place', 
+      tag_sl: 'Les blocs glissent jusqu’à buter. Prévoyez les arrêts.',
+      sl_howto_summary: 'Amenez chaque bloc numéroté sur la case qui porte son numéro.<span>Comment jouer</span>',
+      
+      sl_howto_keys: 'Balayez un bloc, ou touchez-le et utilisez les flèches. Clavier : <kbd>1</kbd>–<kbd>9</kbd> choisissent un bloc (<kbd>0</kbd> pour le 10), <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> le font glisser, <kbd>Retour arrière</kbd> annule.',
+      sl_moves: 'Coups', sl_par: 'Par', sl_board: 'Plateau', sl_pad: 'Faire glisser le bloc choisi',
+      dir_up: 'vers le haut', dir_down: 'vers le bas', dir_left: 'vers la gauche', dir_right: 'vers la droite',
+      sl_dir_btn: d => `Glisser ${d}`,
+      sl_block: (n, r, c, tr, tc, home, sel) => `Bloc ${n}, ligne ${r}, colonne ${c}` + (home ? ', sur sa case' : `. Sa case : ligne ${tr}, colonne ${tc}`) + (sel ? ', choisi' : ''),
+      sl_picked: n => `Bloc ${n} choisi. Faites-le glisser avec les flèches.`,
+      sl_stuck: (n, d) => `Le bloc ${n} ne peut pas glisser ${d}.`,
+      sl_slid: (n, d, home) => `Le bloc ${n} a glissé ${d}` + (home ? ' et il est sur sa case.' : '.'),
+      sl_undo: 'Annuler', sl_restart: 'Recommencer', sl_hint: 'Indice',
+      
+      sl_dead: 'Impossible de finir à partir d’ici. Annulez ou recommencez.',
+       at_par: 'Au par',
+      sl_cheers: ['Tous en place !', 'Pile au bon endroit !', 'Chemin dégagé !', 'Parfait !'],
+      
+      sl_win_par: n => `${n} coups, pile le par.`,
+      sl_win_over: (n, p) => `${n} coups. Le par est de ${p} : il existe un chemin plus court.`,
+      
+      sl_solved_status: n => `Résolu en ${n} coup${S(n, 's')}.`,
+       sl_restarted: 'Retour au départ.',
+        
+       sl_thinking: 'Recherche du meilleur coup…', 
+      sl_too_big: 'Trop de possibilités à vérifier d’ici. Annulez quelques coups ou recommencez, puis redemandez.',
+      
+      sl_map: 'Carte',   map_maze: 'Labyrinthe', map_open: 'Ouverte', map_rooms: 'Salles',
+      sl_desc: 'Faites glisser les blocs numérotés le long du chemin jusqu’à leur case. Deux chapitres de niveaux, de 3 à 10 blocs.',
+      sl_howto_p: 'Choisissez un bloc, puis faites-le glisser vers le haut, le bas, la gauche ou la droite. Il avance jusqu’au bout du chemin ou jusqu’à heurter un autre bloc : il ne s’arrête que là où quelque chose le bloque. Servez-vous des autres blocs comme butées. Le par est le plus petit nombre de coups possible pour le niveau. Résolvez un niveau pour débloquer le suivant. Chaque étape compte 100 niveaux et ajoute un bloc : elle commence facile et devient plus difficile. Le chapitre 2 reprend de 3 à 10 blocs, en plus difficile.',
+      sl_chapter: n => `Chapitre ${n}`, sl_stage: k => `${k} blocs`, sl_level_of: (i, n) => `Niveau ${i} sur ${n}`,
+      sl_levels: 'Niveaux', sl_soon: 'Bientôt', sl_ch_progress: (n, t) => `${n} niveaux résolus sur ${t}`, sl_chapters: 'Chapitres', sl_stages: 'Étapes', sl_blocks: 'Blocs',
+      sl_stage_progress: (n, t) => `${n} niveaux résolus sur ${t} dans cette étape`,
+      sl_stage_note: k => `${k} blocs · 100 niveaux, du plus facile au plus difficile`,
+      sl_level_btn: (i, st) => `Niveau ${i}` + ({ par: ', résolu au par', done: ', résolu', open: ', le prochain', locked: ', verrouillé' })[st],
+      sl_leg_par: 'Résolu au par', sl_leg_done: 'Résolu', sl_leg_open: 'Le prochain',
+      sl_locked_chapter: n => `Terminez le chapitre ${n} pour le débloquer`,
+      sl_next_level: 'Niveau suivant',
+      sl_new_stage: (k, ch) => `Nouvelle étape : ${k} blocs${ch > 1 ? `, chapitre ${ch}` : ''}. Elle commence facile et devient plus difficile.`,
+      sl_replay: 'Vous avez déjà résolu ce niveau. Rejouez-le quand vous voulez.', sl_best: b => ` Votre record : ${b} coups.`,
+      sl_stage_done: (k, nk) => ` L’étape à ${k} blocs est terminée. Ensuite : ${nk} blocs.`,
+      sl_chapter_done: n => ` Chapitre ${n} terminé ! Le chapitre ${n + 1} est débloqué.`,
+      sl_all_done: ' Vous avez résolu tous les niveaux.',
+      sl_eyebrow: (ch, k, i) => `Chapitre ${ch} · ${k} blocs · Niveau ${i}`,
+      sl_hinted_msg: 'Résolu avec un indice. Le niveau suivant est débloqué, mais celui-ci ne compte pas pour le par.',
+      sl_hint_msg: (n, d) => `Essayez de faire glisser le bloc ${n} ${d}. Un niveau résolu avec un indice ne compte pas pour le par.`,
+      sl_stats: 'Progression Glisse et place', sl_solved_lv: 'Niveaux résolus', sl_no_hints: 'Sans indice'
     },
     zh: {
       lang_label: '语言', skip: '跳到游戏',
@@ -932,7 +2963,54 @@ kbd {
       shown_msg: '看着答案解出，这题不计分。下一题自己试试吧。',
       solved_in: c => `用时 ${c}。`, fastest_yet: '这是你的最快纪录。', in_row: n => `已连续解出 ${n} 题。`,
       solved_status: e => `已解出：${e} = 24`, made24: s => `算出 24 · ${s}`,
-      new_range: r => `新题目，数字范围 1 到 ${r}。`, next_puzzle: '下一题'
+      new_range: r => `新题目，数字范围 1 到 ${r}。`, next_puzzle: '下一题',
+      sl_name: '滑块归位', 
+      tag_sl: '方块会一直滑到被挡住为止。规划好停靠点。',
+      sl_howto_summary: '把每个数字方块移到写有相同数字的格子上。<span>玩法说明</span>',
+      
+      sl_howto_keys: '滑动方块，或点一下方块再用方向按钮。键盘：<kbd>1</kbd>–<kbd>9</kbd> 选择方块（<kbd>0</kbd> 为 10 号），<kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> 滑动，<kbd>Backspace</kbd> 撤销。',
+      sl_moves: '步数', sl_par: '标准', sl_board: '棋盘', sl_pad: '滑动所选方块',
+      dir_up: '向上', dir_down: '向下', dir_left: '向左', dir_right: '向右',
+      sl_dir_btn: d => `${d}滑动`,
+      sl_block: (n, r, c, tr, tc, home, sel) => `方块 ${n}，第 ${r} 行第 ${c} 列` + (home ? '，已在目标格' : `。目标格：第 ${tr} 行第 ${tc} 列`) + (sel ? '，已选中' : ''),
+      sl_picked: n => `已选中方块 ${n}。用方向键滑动它。`,
+      sl_stuck: (n, d) => `方块 ${n} 无法${d}滑动。`,
+      sl_slid: (n, d, home) => `方块 ${n} ${d}滑动` + (home ? '，已到达目标格。' : '。'),
+      sl_undo: '撤销', sl_restart: '重来', sl_hint: '提示',
+      
+      sl_dead: '从这里无法完成。请撤销或重来。',
+       at_par: '达标',
+      sl_cheers: ['全部归位！', '完美到位！', '一路畅通！', '分毫不差！'],
+      
+      sl_win_par: n => `${n} 步，正好达到标准。`,
+      sl_win_over: (n, p) => `${n} 步。标准是 ${p} 步，还有更短的走法。`,
+      
+      sl_solved_status: n => `${n} 步完成。`,
+       sl_restarted: '已回到开始。',
+        
+       sl_thinking: '正在寻找最佳一步…', 
+      sl_too_big: '从这里要检查的情况太多了。先撤销几步或重来，再请求提示。',
+      
+      sl_map: '地图',   map_maze: '迷宫', map_open: '开阔', map_rooms: '房间',
+      sl_desc: '沿着路径滑动数字方块，让它们回到各自的格子。两章关卡，从 3 个方块到 10 个方块。',
+      sl_howto_p: '选一个方块，然后向上、下、左、右滑动。它会一直滑到路径尽头或撞上另一个方块，所以只会停在有东西挡住的地方。把其他方块当作挡板。标准步数是这一关所需的最少步数。解开一关才能解锁下一关。每个阶段有 100 关，并多加一个方块，从简单开始逐渐变难。第 2 章会再从 3 个方块走到 10 个方块，难度更高。',
+      sl_chapter: n => `第 ${n} 章`, sl_stage: k => `${k} 个方块`, sl_level_of: (i, n) => `第 ${i} 关（共 ${n} 关）`,
+      sl_levels: '关卡', sl_soon: '即将推出', sl_ch_progress: (n, t) => `已完成 ${n}/${t} 关`, sl_chapters: '章节', sl_stages: '阶段', sl_blocks: '方块数',
+      sl_stage_progress: (n, t) => `本阶段已完成 ${n}/${t} 关`,
+      sl_stage_note: k => `${k} 个方块 · 100 关，由易到难`,
+      sl_level_btn: (i, st) => `第 ${i} 关` + ({ par: '，已达标', done: '，已完成', open: '，下一关', locked: '，未解锁' })[st],
+      sl_leg_par: '达标完成', sl_leg_done: '已完成', sl_leg_open: '下一关',
+      sl_locked_chapter: n => `完成第 ${n} 章后解锁`,
+      sl_next_level: '下一关',
+      sl_new_stage: (k, ch) => `新阶段：${k} 个方块${ch > 1 ? `，第 ${ch} 章` : ''}。从简单开始，逐渐变难。`,
+      sl_replay: '这一关你已经解开了，可以随时再玩。', sl_best: b => `你的最佳：${b} 步。`,
+      sl_stage_done: (k, nk) => `${k} 个方块的阶段完成了。接下来：${nk} 个方块。`,
+      sl_chapter_done: n => `第 ${n} 章完成！第 ${n + 1} 章已解锁。`,
+      sl_all_done: '你已解开所有关卡。',
+      sl_eyebrow: (ch, k, i) => `第 ${ch} 章 · ${k} 个方块 · 第 ${i} 关`,
+      sl_hinted_msg: '用了提示解开。下一关已解锁，但这一关不计入达标。',
+      sl_hint_msg: (n, d) => `试试把方块 ${n} ${d}滑动。用提示解开的关卡不计入达标。`,
+      sl_stats: '滑块归位进度', sl_solved_lv: '已解关卡', sl_no_hints: '无提示'
     }
   };
   const LANGS = Object.keys(STR);
@@ -960,9 +3038,10 @@ kbd {
   const views = {
     hub: document.getElementById('hub'),
     'crack-the-code': document.getElementById('crack-the-code'),
-    'make-24': document.getElementById('make-24')
+    'make-24': document.getElementById('make-24'),
+    'slide-path': document.getElementById('slide-path')
   };
-  const TAGLINES = { hub: 'tag_hub', 'crack-the-code': 'tag_crack', 'make-24': 'tag_24' };
+  const TAGLINES = { hub: 'tag_hub', 'crack-the-code': 'tag_crack', 'make-24': 'tag_24', 'slide-path': 'tag_sl' };
   const backBtn = document.getElementById('backBtn');
   const tagline = document.getElementById('tagline');
   function route() {
@@ -977,6 +3056,7 @@ kbd {
   document.getElementById('toHub').onclick = () => { location.hash = 'hub'; };
   document.getElementById('open-crack').onclick = () => { location.hash = 'crack-the-code'; };
   document.getElementById('open-24').onclick = () => { location.hash = 'make-24'; };
+  document.getElementById('open-slide').onclick = () => { location.hash = 'slide-path'; };
 
   /* ======================================================
      Crack the Code
@@ -1243,9 +3323,11 @@ kbd {
     const c = document.getElementById('confetti');
     c.getContext('2d').clearRect(0, 0, c.width, c.height);
   }
-  function confetti() {
+  // One shared canvas: it moves into whichever win popup is opening, since a hidden popup hides it too.
+  function confetti(host = winOverlay) {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const c = document.getElementById('confetti'), ctx = c.getContext('2d');
+    if (c.parentNode !== host) host.prepend(c);
     const dpr = window.devicePixelRatio || 1;
     c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr);
     const cs = getComputedStyle(document.documentElement);
@@ -1748,7 +3830,7 @@ kbd {
     setTimeout(() => {
       m24El.overlay.hidden = false;
       $('m24WinNext').focus();
-      if (!m24.shown) confetti();
+      if (!m24.shown) confetti(m24El.overlay);
     }, 450);
   }
   function m24HideWin() { m24El.overlay.hidden = true; stopConfetti(); }
@@ -1809,6 +3891,461 @@ kbd {
     m24ShowStats();
   })();
 
+  /* ======================================================
+     Slide Path
+     ====================================================== */
+  // Levels: each chapter has a stage for every block count from 3 to 10, and each stage has 100 levels that
+  // start easy and get harder. Solving a level unlocks the next one. The levels were made ahead of time with
+  // an exact solver (par is the true fewest moves) and live in the <script id="slLevelData"> block, one per line.
+  const SL_STAGES = [3, 4, 5, 6, 7, 8, 9, 10], SL_PER = 100, SL_CH = SL_STAGES.length * SL_PER;
+  const SL_ALPHA = [...Array(87)].map((_, i) => String.fromCharCode(40 + i)).filter(c => c !== '<' && c !== '\\' && c !== '`').join('');
+  const SL_DATA = document.getElementById('slLevelData').textContent.trim().split('\n').map(l => l.trim());
+  const SL_TOTAL = SL_DATA.length, SL_CHAPTERS = Math.ceil(SL_TOTAL / SL_CH);
+  const slWhere = idx => ({ ch: Math.floor(idx / SL_CH) + 1, s: Math.floor((idx % SL_CH) / SL_PER), i: idx % SL_PER, k: SL_STAGES[Math.floor((idx % SL_CH) / SL_PER)] });
+  // Line format: map type, board size, par, the board as 6-bit chunks, then home squares and starting squares (one character each).
+  function slLevel(idx) {
+    const line = SL_DATA[idx], { k } = slWhere(idx), v = c => SL_ALPHA.indexOf(c);
+    const n = v(line[1]), par = v(line[2]), chunks = Math.ceil(n * n / 6), cells = [];
+    for (let j = 0; j < chunks; j++) { const x = v(line[3 + j]); for (let b = 5; b >= 0; b--) cells.push((x >> b) & 1); }
+    cells.length = n * n;
+    const at = 3 + chunks, pos = line.slice(at).split('').map(v);
+    return { idx, k, r: n, c: n, style: { m: 'maze', o: 'open', r: 'rooms' }[line[0]], par, cells, targets: pos.slice(0, k), start: pos.slice(k, 2 * k) };
+  }
+  const SL_STEP = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  function slSlide(pz, pos, b, dir) {
+    const [dx, dy] = SL_STEP[dir];
+    let x = pos[b] % pz.c, y = Math.floor(pos[b] / pz.c);
+    for (;;) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= pz.c || ny >= pz.r) break;
+      const n = ny * pz.c + nx;
+      if (!pz.cells[n] || pos.some((p, j) => j !== b && p === n)) break;
+      x = nx; y = ny;
+    }
+    return y * pz.c + x;
+  }
+  const slDone = (pz, pos) => pos.every((p, i) => p === pz.targets[i]);
+
+  // Hints and dead-end checks can take a moment on big boards, so the solver (the <script id="slEngine"> block)
+  // runs in a background worker when the browser allows one, and on the page otherwise.
+  const slEngine = (function () {
+    const src = document.getElementById('slEngine').textContent;
+    const glue = `\nonmessage = e => { const m = e.data; postMessage({ id: m.id, move: slHintFrom(m.pz, m.pos, m.cap) }); };`;
+    let worker = null, local = null, seq = 0, url = null;
+    const waiting = new Map();
+    const settle = () => { waiting.forEach(f => f(null)); waiting.clear(); };
+    function start() {
+      try {
+        url = url || URL.createObjectURL(new Blob([src + glue], { type: 'text/javascript' }));
+        worker = new Worker(url);
+        worker.onmessage = e => { const f = waiting.get(e.data.id); waiting.delete(e.data.id); if (f) f(e.data); };
+        worker.onerror = () => { worker = null; settle(); };
+      } catch (err) { worker = null; }
+    }
+    start();
+    // Drop whatever the worker is busy with, such as a check for a level the player just left.
+    function reset() { if (worker && waiting.size) { worker.terminate(); settle(); start(); } }
+    function run(msg) {
+      if (worker) return new Promise(res => { const id = ++seq; waiting.set(id, res); worker.postMessage({ ...msg, id }); });
+      local = local || new Function(src + '; return { slHintFrom };')();
+      return new Promise(res => setTimeout(() => res({ move: local.slHintFrom(msg.pz, msg.pos, msg.cap) }), 30));
+    }
+    return { run, reset };
+  })();
+
+  const SLKEY = 'digitden.slide.level', SLPROG = 'digitden.slide.progress';
+  const sl = { idx: 0, pz: null, pos: [], hist: [], sel: 0, hinted: false, done: false, hint: null };
+  const slEl = { board: $('slBoard'), cells: $('slCells'), status: $('slStatus'), overlay: $('slOverlay'), picker: $('slPicker'), blocks: [], marks: null };
+  let slStatusFn = null, slStatusCls = '';
+  function slStatus(fn, cls) { slStatusFn = fn || null; slStatusCls = cls || ''; slDrawStatus(); }
+  function slDrawStatus() { slEl.status.textContent = slStatusFn ? slStatusFn() : ''; slEl.status.className = 'status' + (slStatusCls ? ' ' + slStatusCls : ''); }
+  const slXY = i => [i % sl.pz.c, Math.floor(i / sl.pz.c)];
+  const slColor = b => `var(--sl-b${b + 1})`;
+  // A solved level is not resumed: coming back opens the level after it.
+  const slSave = () => store.set(SLKEY, sl.done ? { idx: Math.min(sl.idx + 1, SL_TOTAL - 1) } : { idx: sl.idx, pos: sl.pos, hist: sl.hist, hinted: sl.hinted });
+
+  /* ---------- progress ---------- */
+  // Per level: s = solved, b = fewest moves in a solve without a hint.
+  const slProg = () => store.get(SLPROG, {});
+  // Levels unlock in order, so the first unsolved level is the furthest you can play.
+  function slFrontier(p = slProg()) { let i = 0; while (i < SL_TOTAL && p[i] && p[i].s) i++; return Math.min(i, SL_TOTAL - 1); }
+  const slUnlocked = (idx, p) => idx <= slFrontier(p);
+  function slShowStats() {
+    const p = slProg(), recs = Object.entries(p);
+    const solved = recs.filter(([, r]) => r.s).length;
+    const clean = recs.filter(([, r]) => r.b != null);
+    const atPar = clean.filter(([i, r]) => r.b <= slLevel(+i).par).length;
+    ['sl-', 'slw-'].forEach(pre => {
+      $(pre + 'solved').textContent = solved;
+      $(pre + 'par').textContent = atPar;
+      $(pre + 'clean').textContent = clean.length;
+    });
+  }
+
+  /* ---------- board ---------- */
+  // Draw the path and home squares, and make one button per block. Runs once per level.
+  function slBuild() {
+    const pz = sl.pz;
+    slEl.board.style.setProperty('--c', pz.c);
+    slEl.board.style.setProperty('--r', pz.r);
+    slEl.board.classList.remove('win');
+    slEl.cells.innerHTML = '';
+    pz.cells.forEach((v, i) => {
+      const d = document.createElement('div');
+      d.className = 'sl-cell' + (v ? ' path' : '');
+      d.dataset.i = i;
+      const t = pz.targets.indexOf(i);
+      if (t >= 0) { d.classList.add('home'); d.dataset.n = t + 1; d.style.setProperty('--bc', slColor(t)); }
+      slEl.cells.appendChild(d);
+    });
+    if (!slEl.marks) { slEl.marks = document.createElement('div'); slEl.marks.className = 'sl-marks'; slEl.marks.setAttribute('aria-hidden', 'true'); slEl.board.appendChild(slEl.marks); }
+    slEl.marks.innerHTML = '';
+    pz.targets.forEach((t, b) => {
+      const m = document.createElement('div');
+      m.className = 'sl-mark'; m.dataset.n = b + 1;
+      m.style.setProperty('--bc', slColor(b));
+      m.style.gridColumn = (t % pz.c) + 1; m.style.gridRow = Math.floor(t / pz.c) + 1;
+      slEl.marks.appendChild(m);
+    });
+    slEl.blocks.forEach(b => b.remove());
+    slEl.blocks = pz.start.map((_, b) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'sl-block';
+      el.dataset.b = b;
+      el.style.setProperty('--bc', slColor(b));
+      el.innerHTML = `<span>${b + 1}</span>`;
+      el.addEventListener('focus', () => { if (sl.sel !== b) { sl.sel = b; slRender(); } });
+      slEl.board.appendChild(el);
+      return el;
+    });
+  }
+  // On screen, a block's route is one animation with every corner as a fixed point: from where the block is now,
+  // through each corner it still has to reach, to where it ends up. The browser hits each corner exactly, so the
+  // block turns cleanly instead of cutting across. When a new move comes in mid-route (keys pressed quickly or
+  // together), the route is rebuilt from the block's exact spot on screen, so nothing waits. Slides heading for a
+  // corner run at a steady pace; the last one eases to a stop.
+  const slReduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const SL_EASE_START = 60, SL_EASE_SQ = 35, SL_GLIDE_SQ = 28; // milliseconds
+  // However much is queued up (keys pressed in a burst, long hallways), a route never takes longer than this:
+  // the block speeds up to catch up instead of falling further and further behind the key presses.
+  const SL_ROUTE_MAX = 300;
+  const slTf = p => `translate(${p[0] * 100}%, ${p[1] * 100}%)`;
+  function slPlace(b, x, y, jump) {
+    const el = slEl.blocks[b], a = el._anim || (el._anim = { to: null, anim: null, pts: [] });
+    if (a.to && a.to[0] === x && a.to[1] === y) return;
+    const settle = () => { el.style.setProperty('--x', x); el.style.setProperty('--y', y); };
+    if (jump || !a.to || slReduced() || !el.animate) {
+      if (a.anim) a.anim.cancel();
+      a.anim = null; a.pts = []; a.to = [x, y];
+      settle();
+      return;
+    }
+    let from = a.to, corners = [];
+    if (a.anim && a.anim.playState !== 'finished' && a.anim.playState !== 'idle') {
+      const w = el.getBoundingClientRect().width, m = new DOMMatrix(getComputedStyle(el).transform), t = a.anim.currentTime;
+      if (w) from = [m.m41 / w, m.m42 / w];
+      corners = a.pts.filter(p => p.t > t).map(p => p.xy); // still ahead, including the old end point
+    }
+    if (a.anim) a.anim.cancel();
+    const route = [...corners, [x, y]], frames = [{ transform: slTf(from) }], pts = [];
+    let total = 0, prev = from;
+    route.forEach((p, i) => {
+      const last = i === route.length - 1, squares = Math.abs(p[0] - prev[0]) + Math.abs(p[1] - prev[1]);
+      total += last ? SL_EASE_START + squares * SL_EASE_SQ : squares * SL_GLIDE_SQ;
+      frames[frames.length - 1].easing = last ? 'cubic-bezier(.25, .8, .35, 1)' : 'linear';
+      frames.push({ transform: slTf(p) });
+      pts.push({ xy: p, t: total });
+      prev = p;
+    });
+    frames.forEach((f, i) => { f.offset = i ? pts[i - 1].t / total : 0; });
+    const duration = Math.min(total, SL_ROUTE_MAX);
+    pts.forEach(p => { p.t *= duration / total; });
+    a.to = [x, y]; a.pts = pts;
+    settle(); // where the block rests once the animation ends
+    a.anim = el.animate(frames, { duration });
+  }
+  // jump: put every block straight where it belongs (new level, restart) instead of sliding it there.
+  function slRender(jump) {
+    const pz = sl.pz, w = slWhere(sl.idx), p = slProg();
+    $('slChapter').textContent = tr('sl_chapter', w.ch);
+    $('slStage').textContent = tr('sl_stage', w.k);
+    $('slLevelNo').textContent = tr('sl_level_of', w.i + 1, SL_PER);
+    let n = 0; for (let j = 0; j < SL_PER; j++) if (p[sl.idx - w.i + j] && p[sl.idx - w.i + j].s) n++;
+    $('slProgFill').style.width = n + '%';
+    $('slProg').setAttribute('aria-valuenow', n);
+    $('slProg').setAttribute('aria-label', tr('sl_stage_progress', n, SL_PER));
+    const stop = sl.done;
+    document.querySelectorAll('#slPad .key').forEach(k => {
+      k.disabled = stop;
+      k.setAttribute('aria-label', tr('sl_dir_btn', tr('dir_' + k.dataset.dir)));
+    });
+    $('slUndo').disabled = stop || !sl.hist.length;
+    $('slRestart').disabled = stop || !sl.hist.length;
+    $('slHint').disabled = stop;
+    $('slNext').hidden = !(sl.idx + 1 < SL_TOTAL && p[sl.idx] && p[sl.idx].s);
+    slEl.blocks.forEach((el, b) => {
+      const [x, y] = slXY(sl.pos[b]), [tx, ty] = slXY(pz.targets[b]);
+      const home = sl.pos[b] === pz.targets[b];
+      slPlace(b, x, y, jump);
+      el.classList.toggle('sel', b === sl.sel && !sl.done);
+      el.classList.toggle('home', home);
+      el.classList.toggle('hint', !!sl.hint && sl.hint.b === b && !sl.done);
+      el.setAttribute('aria-label', tr('sl_block', b + 1, y + 1, x + 1, ty + 1, tx + 1, home, b === sl.sel));
+    });
+    [...slEl.marks.children].forEach((m, t) => {
+      const on = sl.pos.indexOf(pz.targets[t]);
+      m.classList.toggle('covered', on >= 0 && on !== t);
+    });
+    $('slMoves').textContent = sl.hist.length;
+    $('slPar').textContent = pz.par;
+    $('slMapName').textContent = tr('map_' + pz.style);
+  }
+
+  // Open a level. A saved game in progress for that level picks up where it was left.
+  function slOpen(idx, saved) {
+    idx = Math.max(0, Math.min(SL_TOTAL - 1, idx));
+    if (!slUnlocked(idx)) return;
+    slEngine.reset(); slHintAsk++; slCheckAsk++;
+    const before = sl.pz ? slWhere(sl.idx) : null;
+    sl.idx = idx; sl.pz = slLevel(idx);
+    sl.pos = saved ? saved.pos.slice() : sl.pz.start.slice();
+    sl.hist = saved ? saved.hist : [];
+    sl.hinted = saved ? !!saved.hinted : false;
+    sl.done = false;
+    sl.sel = 0; sl.hint = null;
+    slBuild();
+    slRender(true);
+    const w = slWhere(idx), rec = slProg()[idx];
+    if (w.i === 0 && (!before || before.k !== w.k || before.ch !== w.ch)) slStatus(() => tr('sl_new_stage', w.k, w.ch));
+    else if (rec && rec.s) slStatus(() => tr('sl_replay') + (rec.b != null ? tr('sl_best', rec.b) : ''));
+    else slStatus(null);
+    slSave();
+  }
+
+  /* ---------- moves ---------- */
+  function slBump(b) { const el = slEl.blocks[b]; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  function slMove(b, dir) {
+    if (sl.done || b == null || !sl.pz) return;
+    sl.sel = b;
+    const to = slSlide(sl.pz, sl.pos, b, dir);
+    if (to === sl.pos[b]) { slBump(b); slStatus(() => tr('sl_stuck', b + 1, tr('dir_' + dir))); slRender(); return; }
+    sl.hist.push(sl.pos.slice());
+    sl.pos[b] = to;
+    sl.hint = null;
+    const home = to === sl.pz.targets[b];
+    slStatus(() => tr('sl_slid', b + 1, tr('dir_' + dir), home));
+    if (slDone(sl.pz, sl.pos)) slWin(); else slCheckDead();
+    slRender();
+    slSave();
+  }
+  // After each move, quietly check whether the level can still be finished. Small searches only:
+  // if the answer would take long to find, say nothing.
+  let slCheckAsk = 0;
+  function slCheckDead() {
+    const ask = ++slCheckAsk, pz = sl.pz, at = sl.pos.join();
+    slEngine.run({ pz, pos: sl.pos.slice(), cap: 300000 }).then(r => {
+      if (ask !== slCheckAsk || pz !== sl.pz || at !== sl.pos.join() || sl.done || !r) return;
+      if (r.move === null) slStatus(() => tr('sl_dead'), 'lose');
+    });
+  }
+  function slUndo() {
+    if (sl.done || !sl.hist.length) return;
+    sl.pos = sl.hist.pop(); sl.hint = null; slCheckAsk++;
+    slStatus(null); slRender(); slSave();
+  }
+  function slRestart() {
+    if (sl.done || !sl.hist.length) return;
+    sl.pos = sl.pz.start.slice(); sl.hist = []; sl.hint = null; slCheckAsk++;
+    slStatus(() => tr('sl_restarted')); slRender(true); slSave();
+  }
+  let slHintAsk = 0;
+  async function slHint() {
+    if (sl.done) return;
+    const ask = ++slHintAsk, pz = sl.pz, at = sl.pos.slice();
+    slStatus(() => tr('sl_thinking'));
+    $('slHint').disabled = true;
+    const r = await slEngine.run({ pz, pos: at });
+    if (ask !== slHintAsk || pz !== sl.pz || at.join() !== sl.pos.join() || sl.done) { slRender(); return; }
+    const mv = r && r.move;
+    if (mv === false || !r) { slStatus(() => tr('sl_too_big')); slRender(); return; }
+    if (!mv) { slStatus(() => tr('sl_dead'), 'lose'); slRender(); return; }
+    sl.hinted = true;
+    sl.hint = mv; sl.sel = mv.b;
+    slStatus(() => tr('sl_hint_msg', mv.b + 1, tr('dir_' + mv.d)));
+    slRender(); slSave();
+  }
+
+  /* ---------- solving a level ---------- */
+  function slWin() {
+    sl.done = true; sl.hint = null;
+    const n = sl.hist.length, par = sl.pz.par, idx = sl.idx, w = slWhere(idx);
+    const p = slProg(), rec = p[idx] || {}, first = !rec.s;
+    rec.s = 1;
+    if (!sl.hinted && (rec.b == null || n < rec.b)) rec.b = n;
+    p[idx] = rec;
+    store.set(SLPROG, p);
+    let msg = sl.hinted ? tr('sl_hinted_msg') : n <= par ? tr('sl_win_par', n) : tr('sl_win_over', n, par);
+    if (first && idx + 1 >= SL_TOTAL) msg += tr('sl_all_done');
+    else if (first && (idx + 1) % SL_CH === 0) msg += tr('sl_chapter_done', w.ch);
+    else if (first && w.i === SL_PER - 1) msg += tr('sl_stage_done', w.k, SL_STAGES[w.s + 1]);
+    slShowStats();
+    slStatus(() => tr('sl_solved_status', n), 'win');
+    $('slWinEyebrow').textContent = tr('sl_eyebrow', w.ch, w.k, w.i + 1);
+    const CHEERS = tr('sl_cheers');
+    $('slWinTitle').textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+    $('slWinMsg').textContent = msg;
+    $('slWinNext').hidden = idx + 1 >= SL_TOTAL;
+    setTimeout(() => {
+      slEl.board.classList.add('win');
+      slRender();
+      setTimeout(() => {
+        slEl.overlay.hidden = false;
+        ($('slWinNext').hidden ? $('slWinLevels') : $('slWinNext')).focus();
+        if (!sl.hinted) confetti(slEl.overlay);
+      }, 350);
+    }, 260);
+  }
+  function slHideWin() { slEl.overlay.hidden = true; stopConfetti(); }
+  $('slWinClose').onclick = slHideWin;
+  $('slWinNext').onclick = () => { slHideWin(); slOpen(sl.idx + 1); };
+  $('slWinLevels').onclick = () => { slHideWin(); slShowPicker(); };
+  slEl.overlay.addEventListener('click', e => { if (e.target === slEl.overlay) slHideWin(); });
+  $('slNext').onclick = () => slOpen(sl.idx + 1);
+
+  /* ---------- level picker ---------- */
+  // Chapter tabs, then a tab per stage (block count), then the 100 levels of that stage.
+  let slPick = { ch: 1, s: 0 };
+  // Outline padlock for locked chapters, drawn in the text colour.
+  const SL_LOCK = '<svg class="sl-lock" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"/><rect x="4.5" y="11" width="15" height="10.5" rx="2.5"/><path d="M12 14.75v3"/></svg>';
+  function slDrawPicker() {
+    const p = slProg(), front = slFrontier(p);
+    const chEl = $('slPickCh'), stEl = $('slPickStage'), grid = $('slPickGrid');
+    chEl.innerHTML = ''; stEl.innerHTML = ''; grid.innerHTML = '';
+    // One tab per chapter, all the same width. The small second line shows progress, a padlock, or "Soon".
+    const tab = (main, sub) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<span>${main}</span><small>${sub}</small>`; return b; };
+    for (let ch = 1; ch <= SL_CHAPTERS; ch++) {
+      const open = (ch - 1) * SL_CH <= front;
+      let done = 0;
+      for (let j = (ch - 1) * SL_CH; j < ch * SL_CH; j++) if (p[j] && p[j].s) done++;
+      const b = tab(tr('sl_chapter', ch), open ? `${done}/${SL_CH}` : SL_LOCK);
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(ch === slPick.ch));
+      b.disabled = !open;
+      if (!open) {
+        b.title = tr('sl_locked_chapter', ch - 1);
+        b.setAttribute('aria-label', tr('sl_chapter', ch) + '. ' + tr('sl_locked_chapter', ch - 1));
+      } else b.setAttribute('aria-label', tr('sl_chapter', ch) + '. ' + tr('sl_ch_progress', done, SL_CH));
+      b.onclick = () => { slPick = { ch, s: ch === slWhere(front).ch ? slWhere(front).s : 0 }; slDrawPicker(); };
+      chEl.appendChild(b);
+    }
+    // The next chapter is on its way: shown, but not playable yet.
+    const soon = tab(tr('sl_chapter', SL_CHAPTERS + 1), tr('sl_soon'));
+    soon.disabled = true;
+    soon.setAttribute('aria-label', tr('sl_chapter', SL_CHAPTERS + 1) + ', ' + tr('soon'));
+    chEl.appendChild(soon);
+    SL_STAGES.forEach((k, s) => {
+      const first = (slPick.ch - 1) * SL_CH + s * SL_PER;
+      const b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(s === slPick.s));
+      b.setAttribute('aria-label', tr('sl_stage', k));
+      b.disabled = first > front;
+      b.textContent = k;
+      b.onclick = () => { slPick.s = s; slDrawPicker(); };
+      stEl.appendChild(b);
+    });
+    $('slPickNote').textContent = tr('sl_stage_note', SL_STAGES[slPick.s]);
+    const base = (slPick.ch - 1) * SL_CH + slPick.s * SL_PER;
+    for (let i = 0; i < SL_PER; i++) {
+      const idx = base + i, rec = p[idx];
+      const b = document.createElement('button');
+      b.type = 'button';
+      const state = rec && rec.s ? (rec.b != null && rec.b <= slLevel(idx).par ? 'par' : 'done') : idx <= front ? 'open' : 'locked';
+      b.className = 'sl-lv ' + state + (idx === sl.idx ? ' here' : '');
+      b.textContent = i + 1;
+      b.disabled = state === 'locked';
+      b.setAttribute('aria-label', tr('sl_level_btn', i + 1, state));
+      b.onclick = () => { slHidePicker(); slOpen(idx); };
+      grid.appendChild(b);
+    }
+  }
+  function slShowPicker() {
+    const w = slWhere(sl.idx);
+    slPick = { ch: w.ch, s: w.s };
+    slDrawPicker();
+    slEl.picker.hidden = false;
+    const here = slEl.picker.querySelector('.sl-lv.here') || slEl.picker.querySelector('.sl-lv:not([disabled])');
+    if (here) here.focus();
+  }
+  function slHidePicker() { slEl.picker.hidden = true; }
+  $('slLevels').onclick = slShowPicker;
+  $('slPickClose').onclick = slHidePicker;
+  slEl.picker.addEventListener('click', e => { if (e.target === slEl.picker) slHidePicker(); });
+
+  /* ---------- input ---------- */
+  // Swipe a block (or anywhere, for the picked block); tap a block to pick it; tap a path square in line with it to send it that way.
+  let slDrag = null;
+  slEl.board.addEventListener('pointerdown', e => {
+    if (sl.done || !sl.pz || e.button > 0) return;
+    const blk = e.target.closest('.sl-block');
+    const cell = e.target.closest('.sl-cell');
+    slDrag = { x: e.clientX, y: e.clientY, id: e.pointerId, b: blk ? +blk.dataset.b : null, cell: cell ? +cell.dataset.i : null, moved: false };
+    if (blk) { sl.sel = slDrag.b; blk.focus({ preventScroll: true }); slRender(); }
+    try { slEl.board.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  const slDirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  slEl.board.addEventListener('pointermove', e => {
+    if (!slDrag || slDrag.moved || e.pointerId !== slDrag.id) return;
+    const dx = e.clientX - slDrag.x, dy = e.clientY - slDrag.y;
+    if (Math.hypot(dx, dy) < 18) return;
+    slDrag.moved = true;
+    slMove(slDrag.b != null ? slDrag.b : sl.sel, slDirOf(dx, dy));
+  });
+  slEl.board.addEventListener('pointerup', e => {
+    if (!slDrag || e.pointerId !== slDrag.id) return;
+    const d = slDrag; slDrag = null;
+    if (d.moved || d.b != null || d.cell == null) { if (d.b != null && !d.moved) slStatus(() => tr('sl_picked', d.b + 1)); return; }
+    const [x, y] = slXY(d.cell), [bx, by] = slXY(sl.pos[sl.sel]);
+    if (x === bx && y !== by) slMove(sl.sel, y < by ? 'up' : 'down');
+    else if (y === by && x !== bx) slMove(sl.sel, x < bx ? 'left' : 'right');
+  });
+  slEl.board.addEventListener('pointercancel', () => { slDrag = null; });
+  document.querySelectorAll('#slPad .key').forEach(k => { k.onclick = () => slMove(sl.sel, k.dataset.dir); });
+  $('slUndo').onclick = slUndo;
+  $('slRestart').onclick = slRestart;
+  $('slHint').onclick = slHint;
+
+  const SL_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+  document.addEventListener('keydown', e => {
+    if (views['slide-path'].hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!slEl.picker.hidden) { if (e.key === 'Escape') slHidePicker(); return; }
+    if (!slEl.overlay.hidden) { if (e.key === 'Escape') slHideWin(); return; }
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'SELECT' || tag === 'SUMMARY' && (e.key === 'Enter' || e.key === ' ')) return;
+    let handled = true;
+    const n = e.key === '0' ? 10 : /^[1-9]$/.test(e.key) ? +e.key : 0;
+    if (n) {
+      if (sl.pz && n <= sl.pz.k && !sl.done) { sl.sel = n - 1; slEl.blocks[n - 1].focus({ preventScroll: true }); slStatus(() => tr('sl_picked', n)); slRender(); }
+    }
+    else if (SL_KEYS[e.key]) slMove(sl.sel, SL_KEYS[e.key]);
+    else if (e.key === 'Backspace' || e.key === 'u' || e.key === 'z') slUndo();
+    else handled = false;
+    if (handled) e.preventDefault();
+  });
+
+  (function initSlide() {
+    const saved = store.get(SLKEY, null), front = slFrontier();
+    const idx = saved && Number.isInteger(saved.idx) && saved.idx >= 0 && saved.idx < SL_TOTAL && saved.idx <= front ? saved.idx : front;
+    const pz = slLevel(idx);
+    const ok = saved && saved.idx === idx && Array.isArray(saved.pos) && saved.pos.length === pz.k && Array.isArray(saved.hist);
+    slOpen(idx, ok ? saved : null);
+    slShowStats();
+  })();
+  window.__slide = { state: () => sl, engine: slEngine, level: slLevel, total: SL_TOTAL };
+
   /* ---------- language picker ---------- */
   // Redraw every piece of text in place; games in progress keep going.
   function setLang(l) {
@@ -1829,6 +4366,8 @@ kbd {
     m24Render();
     if (m24.shown) m24DrawSol();
     m24DrawStatus();
+    slRender();
+    slDrawStatus();
   }
   document.getElementById('langSel').addEventListener('change', e => setLang(e.target.value));
   window.__setLang = setLang;
