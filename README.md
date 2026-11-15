@@ -2,8 +2,7 @@
 
 Small math and logic puzzles you can play in your browser.
 
-**Play it here:** https://srqscat.github.io/digit-den/
-
+**Play it here:** puzzle.ph
 ## Games
 
 - **Crack the Code**: find a hidden 4-digit code. Digits can repeat.
