@@ -365,6 +365,9 @@ kbd {
   position: absolute; left: 0; top: 0; width: calc(100% / var(--c)); height: calc(100% / var(--r));
   transform: translate(calc(var(--x) * 100%), calc(var(--y) * 100%));
   padding: calc(8cqw / var(--c)); border: none; background: transparent; cursor: grab; touch-action: none; z-index: 1;
+  /* Always drawn on its own layer, moving or not: switching layers when a slide ends snaps the block to
+     whole pixels, which shows as a small jiggle on phones (where squares are a fraction of a pixel wide). */
+  will-change: transform;
 }
 .sl-block:active { cursor: grabbing; }
 .sl-block[data-b="9"] span { font-size: calc(36cqw / var(--c)); letter-spacing: -0.04em; }
@@ -412,6 +415,11 @@ kbd {
 .mini .sl-mt { border: 2px dashed var(--sl-b1); color: var(--sl-b1); }
 @media (prefers-reduced-motion: reduce) { .sl-block, .sl-block span { transition: none !important; animation: none !important; } }
 
+/* Phones: the message under the board always has room for two lines, so it never pushes the page around
+   while you swipe, and the whole board card (padding included) takes swipes instead of scrolling the page. */
+#slStatus { min-height: 3em; display: flex; align-items: center; justify-content: center; }
+.sl-frame { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.sl-pad { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Level header, stage progress bar and the level picker. */
 .sl-where { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .sl-where > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
@@ -2588,7 +2596,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
        sl_restarted: 'Back to the start.',
         
        sl_thinking: 'Looking for the best move…', 
-      sl_too_big: 'Too many possibilities to check from here. Undo a few moves or restart, then ask again.',
+      sl_too_big: 'Too many options to check from here. Undo or restart first.',
       
       sl_map: 'Map',   map_maze: 'Maze', map_open: 'Open', map_rooms: 'Rooms',
       sl_desc: 'Slide numbered blocks along the path onto their squares. Two chapters of levels, from 3 blocks up to 10.',
@@ -2602,13 +2610,13 @@ function slHintFrom(pz, pos, cap = 1500000) {
       sl_locked_chapter: n => `Finish Chapter ${n} to unlock`,
       sl_next_level: 'Next level',
       sl_new_stage: (k, ch) => `New stage: ${k} blocks${ch > 1 ? `, Chapter ${ch}` : ''}. It starts easy and gets harder.`,
-      sl_replay: 'You have solved this level. Play it again any time.', sl_best: b => ` Your best: ${b} moves.`,
+      sl_replay: 'Solved before.', sl_best: b => ` Your best: ${b} moves.`,
       sl_stage_done: (k, nk) => ` That completes the ${k}-block stage. Next up: ${nk} blocks.`,
       sl_chapter_done: n => ` Chapter ${n} complete! Chapter ${n + 1} is unlocked.`,
       sl_all_done: ' You have solved every level.',
       sl_eyebrow: (ch, k, i) => `Chapter ${ch} · ${k} blocks · Level ${i}`,
       sl_hinted_msg: 'Solved with a hint. The next level is unlocked, but this one does not count toward at par.',
-      sl_hint_msg: (n, d) => `Try sliding block ${n} ${d}. Levels solved with a hint do not count toward at par.`,
+      sl_hint_msg: (n, d) => `Try sliding block ${n} ${d}.`,
       sl_stats: 'Slide Path progress', sl_solved_lv: 'Levels solved', sl_no_hints: 'No hints'
     },
     es: {
@@ -2722,7 +2730,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
        sl_restarted: 'De vuelta al inicio.',
         
        sl_thinking: 'Buscando el mejor movimiento…', 
-      sl_too_big: 'Hay demasiadas posibilidades desde aquí. Deshaz unos movimientos o reinicia y vuelve a pedirla.',
+      sl_too_big: 'Demasiadas opciones desde aquí. Deshaz o reinicia antes.',
       
       sl_map: 'Mapa',   map_maze: 'Laberinto', map_open: 'Abierto', map_rooms: 'Salas',
       sl_desc: 'Desliza los bloques numerados por el camino hasta sus casillas. Dos capítulos de niveles, de 3 a 10 bloques.',
@@ -2736,13 +2744,13 @@ function slHintFrom(pz, pos, cap = 1500000) {
       sl_locked_chapter: n => `Termina el capítulo ${n} para desbloquearlo`,
       sl_next_level: 'Siguiente nivel',
       sl_new_stage: (k, ch) => `Nueva etapa: ${k} bloques${ch > 1 ? `, capítulo ${ch}` : ''}. Empieza fácil y se va complicando.`,
-      sl_replay: 'Ya resolviste este nivel. Puedes jugarlo de nuevo cuando quieras.', sl_best: b => ` Tu mejor marca: ${b} movimientos.`,
+      sl_replay: 'Ya resuelto.', sl_best: b => ` Tu mejor marca: ${b} movimientos.`,
       sl_stage_done: (k, nk) => ` Has completado la etapa de ${k} bloques. Ahora: ${nk} bloques.`,
       sl_chapter_done: n => ` ¡Capítulo ${n} completado! El capítulo ${n + 1} está desbloqueado.`,
       sl_all_done: ' Has resuelto todos los niveles.',
       sl_eyebrow: (ch, k, i) => `Capítulo ${ch} · ${k} bloques · Nivel ${i}`,
       sl_hinted_msg: 'Resuelto con pista. El siguiente nivel está desbloqueado, pero este no cuenta para el par.',
-      sl_hint_msg: (n, d) => `Prueba a deslizar el bloque ${n} ${d}. Los niveles resueltos con pista no cuentan para el par.`,
+      sl_hint_msg: (n, d) => `Prueba a deslizar el bloque ${n} ${d}.`,
       sl_stats: 'Progreso en Desliza al sitio', sl_solved_lv: 'Niveles resueltos', sl_no_hints: 'Sin pistas'
     },
     fr: {
@@ -2857,7 +2865,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
        sl_restarted: 'Retour au départ.',
         
        sl_thinking: 'Recherche du meilleur coup…', 
-      sl_too_big: 'Trop de possibilités à vérifier d’ici. Annulez quelques coups ou recommencez, puis redemandez.',
+      sl_too_big: 'Trop de possibilités d’ici. Annulez ou recommencez d’abord.',
       
       sl_map: 'Carte',   map_maze: 'Labyrinthe', map_open: 'Ouverte', map_rooms: 'Salles',
       sl_desc: 'Faites glisser les blocs numérotés le long du chemin jusqu’à leur case. Deux chapitres de niveaux, de 3 à 10 blocs.',
@@ -2871,13 +2879,13 @@ function slHintFrom(pz, pos, cap = 1500000) {
       sl_locked_chapter: n => `Terminez le chapitre ${n} pour le débloquer`,
       sl_next_level: 'Niveau suivant',
       sl_new_stage: (k, ch) => `Nouvelle étape : ${k} blocs${ch > 1 ? `, chapitre ${ch}` : ''}. Elle commence facile et devient plus difficile.`,
-      sl_replay: 'Vous avez déjà résolu ce niveau. Rejouez-le quand vous voulez.', sl_best: b => ` Votre record : ${b} coups.`,
+      sl_replay: 'Déjà résolu.', sl_best: b => ` Votre record : ${b} coups.`,
       sl_stage_done: (k, nk) => ` L’étape à ${k} blocs est terminée. Ensuite : ${nk} blocs.`,
       sl_chapter_done: n => ` Chapitre ${n} terminé ! Le chapitre ${n + 1} est débloqué.`,
       sl_all_done: ' Vous avez résolu tous les niveaux.',
       sl_eyebrow: (ch, k, i) => `Chapitre ${ch} · ${k} blocs · Niveau ${i}`,
       sl_hinted_msg: 'Résolu avec un indice. Le niveau suivant est débloqué, mais celui-ci ne compte pas pour le par.',
-      sl_hint_msg: (n, d) => `Essayez de faire glisser le bloc ${n} ${d}. Un niveau résolu avec un indice ne compte pas pour le par.`,
+      sl_hint_msg: (n, d) => `Essayez de faire glisser le bloc ${n} ${d}.`,
       sl_stats: 'Progression Glisse et place', sl_solved_lv: 'Niveaux résolus', sl_no_hints: 'Sans indice'
     },
     zh: {
@@ -2989,7 +2997,7 @@ function slHintFrom(pz, pos, cap = 1500000) {
        sl_restarted: '已回到开始。',
         
        sl_thinking: '正在寻找最佳一步…', 
-      sl_too_big: '从这里要检查的情况太多了。先撤销几步或重来，再请求提示。',
+      sl_too_big: '从这里要检查的情况太多了。请先撤销或重来。',
       
       sl_map: '地图',   map_maze: '迷宫', map_open: '开阔', map_rooms: '房间',
       sl_desc: '沿着路径滑动数字方块，让它们回到各自的格子。两章关卡，从 3 个方块到 10 个方块。',
@@ -3003,13 +3011,13 @@ function slHintFrom(pz, pos, cap = 1500000) {
       sl_locked_chapter: n => `完成第 ${n} 章后解锁`,
       sl_next_level: '下一关',
       sl_new_stage: (k, ch) => `新阶段：${k} 个方块${ch > 1 ? `，第 ${ch} 章` : ''}。从简单开始，逐渐变难。`,
-      sl_replay: '这一关你已经解开了，可以随时再玩。', sl_best: b => `你的最佳：${b} 步。`,
+      sl_replay: '这一关已解开。', sl_best: b => `你的最佳：${b} 步。`,
       sl_stage_done: (k, nk) => `${k} 个方块的阶段完成了。接下来：${nk} 个方块。`,
       sl_chapter_done: n => `第 ${n} 章完成！第 ${n + 1} 章已解锁。`,
       sl_all_done: '你已解开所有关卡。',
       sl_eyebrow: (ch, k, i) => `第 ${ch} 章 · ${k} 个方块 · 第 ${i} 关`,
       sl_hinted_msg: '用了提示解开。下一关已解锁，但这一关不计入达标。',
-      sl_hint_msg: (n, d) => `试试把方块 ${n} ${d}滑动。用提示解开的关卡不计入达标。`,
+      sl_hint_msg: (n, d) => `试试把方块 ${n} ${d}滑动。`,
       sl_stats: '滑块归位进度', sl_solved_lv: '已解关卡', sl_no_hints: '无提示'
     }
   };
@@ -4063,7 +4071,8 @@ function slHintFrom(pz, pos, cap = 1500000) {
     pts.forEach(p => { p.t *= duration / total; });
     a.to = [x, y]; a.pts = pts;
     settle(); // where the block rests once the animation ends
-    a.anim = el.animate(frames, { duration });
+    // fill: hold the end position rather than handing back to the resting style, so nothing re-places the block as it lands.
+    a.anim = el.animate(frames, { duration, fill: 'forwards' });
   }
   // jump: put every block straight where it belongs (new level, restart) instead of sliding it there.
   function slRender(jump) {
