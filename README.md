@@ -2,7 +2,7 @@
 
 Small math and logic puzzles you can play in your browser.
 
-**Play it here:** https://srqscat.github.io/digit-den/
+**Play it here:** http://puzzle.ph/#hub
 
 ## Games
 
